@@ -1,0 +1,15 @@
+# Rust
+/backend/target/
+**/*.rs.bk
+
+# Node
+node_modules/
+/frontend/dist/
+.vite/
+
+# Env
+.env
+.env.local
+
+# OS
+.DS_Store
