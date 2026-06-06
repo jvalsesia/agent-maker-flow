@@ -1,10 +1,16 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { RouterProvider } from "react-router-dom";
 
-// Stage 1 scaffold: a minimal mount to verify the build pipeline.
-// Stage 4 replaces this with the QueryClient + Router providers and AppShell.
+import { queryClient } from "./lib/queryClient";
+import { router } from "./routes/router";
+
+// F02 will wrap these providers with the Clerk provider for authentication.
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <div>Agent Maker Flow — scaffold</div>
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
   </React.StrictMode>,
 );
