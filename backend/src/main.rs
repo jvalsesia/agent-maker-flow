@@ -4,7 +4,7 @@
 //! run fail-fast connectivity checks and migrations, then bind and serve.
 //! The full `/api/v1` router and SSE base are mounted in stage 3.
 
-use agent_maker_flow_backend::{cache, config::AppConfig, db, state::AppState, telemetry};
+use agent_maker_flow_backend::{app, cache, config::AppConfig, db, state::AppState, telemetry};
 use anyhow::Context;
 use tokio::net::TcpListener;
 
@@ -45,16 +45,13 @@ async fn main() -> anyhow::Result<()> {
         config: config.clone(),
     };
 
-    // Stage 2 placeholder router; stage 3 replaces this with the full router.
-    let app = axum::Router::new()
-        .route("/", axum::routing::get(|| async { "ok" }))
-        .with_state(state);
+    let router = app::build_router(state);
 
     let listener = TcpListener::bind(&config.bind_addr)
         .await
         .with_context(|| format!("failed to bind {}", config.bind_addr))?;
     tracing::info!(addr = %config.bind_addr, "server listening");
 
-    axum::serve(listener, app).await.context("server error")?;
+    axum::serve(listener, router).await.context("server error")?;
     Ok(())
 }
