@@ -13,8 +13,9 @@ use agent_maker_flow_backend::{
     app,
     auth::AuthState,
     cache,
-    config::{AppConfig, ClerkConfig},
+    config::{AppConfig, ClerkConfig, GatewayConfig},
     db,
+    gateway::GatewayClient,
     state::AppState,
 };
 use jsonwebtoken::{encode, Algorithm, DecodingKey, EncodingKey, Header};
@@ -103,17 +104,24 @@ fn build_state(db: PgPool) -> AppState {
     auth.jwks
         .insert_key(TEST_KID, DecodingKey::from_rsa_pem(PUB_PEM).expect("decoding key"));
 
+    let gateway_config = GatewayConfig {
+        base_url: "http://localhost:4000".to_string(),
+        master_key: None,
+    };
+
     AppState {
         db,
-        redis,
+        redis: redis.clone(),
         config: AppConfig {
             database_url: String::new(),
             redis_url,
             bind_addr: "127.0.0.1:0".to_string(),
             frontend_origin: AZP.to_string(),
             clerk,
+            gateway: gateway_config.clone(),
         },
         auth,
+        gateway: GatewayClient::new(gateway_config, redis),
     }
 }
 

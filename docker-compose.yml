@@ -29,6 +29,22 @@ services:
       timeout: 5s
       retries: 10
 
+  # LiteLLM proxy: single gateway for all provider model/embedding calls (F03).
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: amf-litellm
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-amf-dev}
+      # Provider keys are consumed by the proxy container, not the backend.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./litellm/config.yaml:/app/config.yaml:ro
+
 volumes:
   amf-postgres-data:
   amf-redis-data:

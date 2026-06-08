@@ -13,6 +13,15 @@ pub struct AppConfig {
     pub bind_addr: String,
     pub frontend_origin: String,
     pub clerk: ClerkConfig,
+    pub gateway: GatewayConfig,
+}
+
+/// LiteLLM gateway settings (F03). `LITELLM_BASE_URL` is required; the master
+/// key is optional (sent as a Bearer token to the proxy when present).
+#[derive(Clone, Debug)]
+pub struct GatewayConfig {
+    pub base_url: String,
+    pub master_key: Option<String>,
 }
 
 /// Clerk authentication settings (F02). `CLERK_ISSUER` and
@@ -52,6 +61,12 @@ impl AppConfig {
                 issuer,
                 jwks_url,
                 authorized_parties,
+            },
+            gateway: GatewayConfig {
+                base_url: required("LITELLM_BASE_URL")?,
+                master_key: std::env::var("LITELLM_MASTER_KEY")
+                    .ok()
+                    .filter(|s| !s.is_empty()),
             },
         })
     }

@@ -8,8 +8,9 @@ use agent_maker_flow_backend::{
     app,
     auth::AuthState,
     cache,
-    config::{AppConfig, ClerkConfig},
+    config::{AppConfig, ClerkConfig, GatewayConfig},
     db,
+    gateway::GatewayClient,
     state::AppState,
 };
 
@@ -27,18 +28,24 @@ async fn try_state() -> Option<AppState> {
         jwks_url: "https://example.clerk.test/.well-known/jwks.json".to_string(),
         authorized_parties: vec!["http://localhost:5173".to_string()],
     };
+    let gateway = GatewayConfig {
+        base_url: "http://localhost:4000".to_string(),
+        master_key: None,
+    };
 
     Some(AppState {
         db,
-        redis,
+        redis: redis.clone(),
         config: AppConfig {
             database_url,
             redis_url,
             bind_addr: "127.0.0.1:0".to_string(),
             frontend_origin: "http://localhost:5173".to_string(),
             clerk: clerk.clone(),
+            gateway: gateway.clone(),
         },
         auth: AuthState::new(clerk),
+        gateway: GatewayClient::new(gateway, redis),
     })
 }
 

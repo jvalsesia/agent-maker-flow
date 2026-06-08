@@ -26,6 +26,19 @@ pub enum AppError {
     #[error("Not found")]
     NotFound,
 
+    /// The LiteLLM gateway/proxy is unreachable (F03).
+    #[error("Model gateway unavailable. Check the LiteLLM proxy and try again.")]
+    GatewayUnavailable,
+
+    /// A model is not available for the requested provider (F03).
+    #[error("Selected model is not available for this provider.")]
+    InvalidModelForProvider,
+
+    /// A provider returned an error (rate limit, quota, exhausted fallback);
+    /// the message carries the provider name and reason (F03).
+    #[error("{0}")]
+    ProviderError(String),
+
     /// Any other internal failure.
     #[error(transparent)]
     Internal(#[from] anyhow::Error),
@@ -39,6 +52,9 @@ impl AppError {
             AppError::Unauthorized => "AUTH001",
             AppError::AuthServiceUnavailable => "AUTH002",
             AppError::NotFound => "NOT_FOUND",
+            AppError::GatewayUnavailable => "GW001",
+            AppError::InvalidModelForProvider => "GW002",
+            AppError::ProviderError(_) => "GW003",
             AppError::Internal(_) => "INTERNAL001",
         }
     }
@@ -50,6 +66,9 @@ impl AppError {
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
             AppError::AuthServiceUnavailable => StatusCode::SERVICE_UNAVAILABLE,
             AppError::NotFound => StatusCode::NOT_FOUND,
+            AppError::GatewayUnavailable => StatusCode::SERVICE_UNAVAILABLE,
+            AppError::InvalidModelForProvider => StatusCode::UNPROCESSABLE_ENTITY,
+            AppError::ProviderError(_) => StatusCode::BAD_GATEWAY,
             AppError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

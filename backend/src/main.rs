@@ -5,7 +5,8 @@
 //! The full `/api/v1` router and SSE base are mounted in stage 3.
 
 use agent_maker_flow_backend::{
-    app, auth::AuthState, cache, config::AppConfig, db, state::AppState, telemetry,
+    app, auth::AuthState, cache, config::AppConfig, db, gateway::GatewayClient, state::AppState,
+    telemetry,
 };
 use anyhow::Context;
 use tokio::net::TcpListener;
@@ -45,11 +46,15 @@ async fn main() -> anyhow::Result<()> {
     let auth = AuthState::new(config.clerk.clone());
     auth.jwks.warm().await;
 
+    // --- Gateway: build the LiteLLM client (availability checked at call time) ---
+    let gateway = GatewayClient::new(config.gateway.clone(), redis.clone());
+
     let state = AppState {
         db,
         redis,
         config: config.clone(),
         auth,
+        gateway,
     };
 
     let router = app::build_router(state);
