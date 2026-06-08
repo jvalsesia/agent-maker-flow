@@ -1,7 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useRoutes } from "react-router-dom";
+
+// The route tree is guarded by RequireAuth and renders Clerk components; mock
+// the Clerk module to a signed-in session so the shell renders under test.
+vi.mock("@clerk/clerk-react", () => ({
+  useAuth: () => ({ isLoaded: true, isSignedIn: true }),
+  UserButton: () => null,
+  SignIn: () => null,
+  SignUp: () => null,
+}));
 
 import { routes } from "../routes/router";
 

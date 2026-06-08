@@ -1,7 +1,10 @@
 /**
  * REST client for the backend. Parses the platform-wide success/error
- * envelopes into typed results, throwing a typed error on failure.
+ * envelopes into typed results, throwing a typed error on failure. Attaches
+ * the current Clerk session token as a Bearer credential when one is present.
  */
+
+import { getAuthToken } from "./authToken";
 
 export interface ApiError {
   code: string;
@@ -31,8 +34,17 @@ interface ErrorEnvelope {
 const BASE_URL = "/api/v1";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = await getAuthToken();
+  const authHeaders: Record<string, string> = token
+    ? { Authorization: `Bearer ${token}` }
+    : {};
+
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders,
+      ...(init?.headers ?? {}),
+    },
     ...init,
   });
 
