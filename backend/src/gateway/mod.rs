@@ -10,6 +10,9 @@ use deadpool_redis::Pool as RedisPool;
 
 use crate::config::GatewayConfig;
 
+pub mod catalog;
+pub mod types;
+
 /// The gateway client: a reqwest HTTP client targeting the LiteLLM proxy, plus
 /// the Redis pool used for caching and usage counters.
 pub struct GatewayClient {

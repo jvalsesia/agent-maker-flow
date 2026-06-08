@@ -14,6 +14,7 @@ use crate::sse;
 
 pub mod health;
 pub mod me;
+pub mod providers;
 
 /// Build the `/api/v1` sub-router. The protected group carries the auth layer;
 /// the public group (health) stays reachable without a token.
@@ -22,6 +23,8 @@ pub fn router(state: AppState) -> Router<AppState> {
 
     let protected = Router::new()
         .route("/me", get(me::me))
+        .route("/providers", get(providers::list_providers))
+        .route("/providers/{provider}/models", get(providers::list_models))
         .route("/sse/heartbeat", get(sse::heartbeat))
         .route_layer(from_fn_with_state(state, require_auth));
 
