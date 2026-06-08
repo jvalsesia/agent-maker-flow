@@ -13,6 +13,19 @@ pub enum AppError {
     #[error("{0}")]
     DependencyUnavailable(String),
 
+    /// Missing, malformed, or expired/invalid authentication token (F02).
+    #[error("Session expired or invalid. Please sign in again.")]
+    Unauthorized,
+
+    /// The authentication service (Clerk JWKS) is unreachable (F02).
+    #[error("Authentication service unavailable. Please try again shortly.")]
+    AuthServiceUnavailable,
+
+    /// A record does not exist, or belongs to another user (F02 ownership
+    /// guard never reveals the existence of other users' data).
+    #[error("Not found")]
+    NotFound,
+
     /// Any other internal failure.
     #[error(transparent)]
     Internal(#[from] anyhow::Error),
@@ -23,6 +36,9 @@ impl AppError {
     pub fn code(&self) -> &'static str {
         match self {
             AppError::DependencyUnavailable(_) => "HEALTH001",
+            AppError::Unauthorized => "AUTH001",
+            AppError::AuthServiceUnavailable => "AUTH002",
+            AppError::NotFound => "NOT_FOUND",
             AppError::Internal(_) => "INTERNAL001",
         }
     }
@@ -31,6 +47,9 @@ impl AppError {
     pub fn status(&self) -> StatusCode {
         match self {
             AppError::DependencyUnavailable(_) => StatusCode::SERVICE_UNAVAILABLE,
+            AppError::Unauthorized => StatusCode::UNAUTHORIZED,
+            AppError::AuthServiceUnavailable => StatusCode::SERVICE_UNAVAILABLE,
+            AppError::NotFound => StatusCode::NOT_FOUND,
             AppError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

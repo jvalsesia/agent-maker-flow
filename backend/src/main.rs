@@ -4,7 +4,9 @@
 //! run fail-fast connectivity checks and migrations, then bind and serve.
 //! The full `/api/v1` router and SSE base are mounted in stage 3.
 
-use agent_maker_flow_backend::{app, cache, config::AppConfig, db, state::AppState, telemetry};
+use agent_maker_flow_backend::{
+    app, auth::AuthState, cache, config::AppConfig, db, state::AppState, telemetry,
+};
 use anyhow::Context;
 use tokio::net::TcpListener;
 
@@ -39,10 +41,14 @@ async fn main() -> anyhow::Result<()> {
         e
     })?;
 
+    // --- Auth: build Clerk auth state (JWKS warmed in stage 3 boot wiring) ---
+    let auth = AuthState::new(config.clerk.clone());
+
     let state = AppState {
         db,
         redis,
         config: config.clone(),
+        auth,
     };
 
     let router = app::build_router(state);

@@ -4,7 +4,14 @@
 
 use std::net::SocketAddr;
 
-use agent_maker_flow_backend::{app, cache, config::AppConfig, db, state::AppState};
+use agent_maker_flow_backend::{
+    app,
+    auth::AuthState,
+    cache,
+    config::{AppConfig, ClerkConfig},
+    db,
+    state::AppState,
+};
 
 async fn try_state() -> Option<AppState> {
     let database_url = std::env::var("DATABASE_URL").ok()?;
@@ -15,6 +22,12 @@ async fn try_state() -> Option<AppState> {
     cache::verify(&cache::init_pool(&redis_url).ok()?).await.ok()?;
     let redis = cache::init_pool(&redis_url).ok()?;
 
+    let clerk = ClerkConfig {
+        issuer: "https://example.clerk.test".to_string(),
+        jwks_url: "https://example.clerk.test/.well-known/jwks.json".to_string(),
+        authorized_parties: vec!["http://localhost:5173".to_string()],
+    };
+
     Some(AppState {
         db,
         redis,
@@ -23,7 +36,9 @@ async fn try_state() -> Option<AppState> {
             redis_url,
             bind_addr: "127.0.0.1:0".to_string(),
             frontend_origin: "http://localhost:5173".to_string(),
+            clerk: clerk.clone(),
         },
+        auth: AuthState::new(clerk),
     })
 }
 
