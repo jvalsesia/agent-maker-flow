@@ -9,7 +9,14 @@ use std::sync::Arc;
 
 use crate::config::ClerkConfig;
 
+pub mod extractor;
 pub mod jwks;
+pub mod middleware;
+pub mod user;
+pub mod verify;
+
+pub use extractor::{ensure_owner, AuthUser};
+pub use middleware::require_auth;
 
 use jwks::JwksCache;
 
