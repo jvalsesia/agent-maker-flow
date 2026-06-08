@@ -10,8 +10,35 @@ use deadpool_redis::Pool as RedisPool;
 
 use crate::config::GatewayConfig;
 
+pub mod cache;
 pub mod catalog;
+pub mod completion;
+pub mod embedding;
 pub mod types;
+pub mod usage;
+
+/// Parse the per-request cost from LiteLLM's `x-litellm-response-cost` header;
+/// absent/unparseable → `0.0`.
+pub(crate) fn parse_cost_header(resp: &reqwest::Response) -> f64 {
+    resp.headers()
+        .get("x-litellm-response-cost")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or_else(|| {
+            tracing::warn!("missing/invalid x-litellm-response-cost header; recording cost 0.0");
+            0.0
+        })
+}
+
+/// Truncate an upstream error body for safe inclusion in a structured error.
+pub(crate) fn truncate(mut s: String) -> String {
+    const MAX: usize = 200;
+    if s.len() > MAX {
+        s.truncate(MAX);
+        s.push('…');
+    }
+    s
+}
 
 /// The gateway client: a reqwest HTTP client targeting the LiteLLM proxy, plus
 /// the Redis pool used for caching and usage counters.

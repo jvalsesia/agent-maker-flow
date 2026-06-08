@@ -7,6 +7,8 @@
 //! when none is reachable (consistent with health/auth tests).
 
 use std::net::SocketAddr;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use agent_maker_flow_backend::{
@@ -15,11 +17,15 @@ use agent_maker_flow_backend::{
     cache,
     config::{AppConfig, ClerkConfig, GatewayConfig},
     db,
+    gateway::types::{ChatMessage, CompletionRequest, EmbeddingRequest},
     gateway::GatewayClient,
     state::AppState,
 };
-use axum::routing::get;
+use axum::extract::State;
+use axum::response::IntoResponse;
+use axum::routing::{get, post};
 use axum::{Json, Router};
+use deadpool_redis::Pool as RedisPool;
 use jsonwebtoken::{encode, Algorithm, DecodingKey, EncodingKey, Header};
 use serde_json::{json, Value};
 use sqlx::PgPool;
@@ -283,4 +289,203 @@ async fn discovery_when_proxy_down_returns_gw001() {
         resp.json::<Value>().await.unwrap()["error"]["code"],
         "GW001"
     );
+}
+
+// --- Completion / embedding (internal client, called directly) ---
+
+#[derive(Clone)]
+struct ExecState {
+    completion_calls: Arc<AtomicUsize>,
+    embedding_calls: Arc<AtomicUsize>,
+}
+
+async fn mock_chat(State(s): State<ExecState>, Json(body): Json<Value>) -> axum::response::Response {
+    let model = body["model"].as_str().unwrap_or("unknown").to_string();
+    if model == "invalid-model" {
+        return (
+            axum::http::StatusCode::BAD_REQUEST,
+            Json(json!({ "error": { "message": "model not available for provider" } })),
+        )
+            .into_response();
+    }
+    s.completion_calls.fetch_add(1, Ordering::SeqCst);
+    let resp = json!({
+        "id": "cmpl-mock",
+        "model": model,
+        "choices": [{ "message": { "role": "assistant", "content": "hello from mock" } }],
+        "usage": { "prompt_tokens": 5, "completion_tokens": 3, "total_tokens": 8 }
+    });
+    ([("x-litellm-response-cost", "0.0001")], Json(resp)).into_response()
+}
+
+async fn mock_embed(State(s): State<ExecState>, Json(_body): Json<Value>) -> axum::response::Response {
+    s.embedding_calls.fetch_add(1, Ordering::SeqCst);
+    let resp = json!({
+        "model": "text-embedding-3-small",
+        "data": [{ "embedding": [0.1, 0.2, 0.3], "index": 0 }],
+        "usage": { "prompt_tokens": 4, "total_tokens": 4 }
+    });
+    ([("x-litellm-response-cost", "0.00002")], Json(resp)).into_response()
+}
+
+fn mock_exec_proxy() -> (Router, ExecState) {
+    let state = ExecState {
+        completion_calls: Arc::new(AtomicUsize::new(0)),
+        embedding_calls: Arc::new(AtomicUsize::new(0)),
+    };
+    let router = Router::new()
+        .route("/chat/completions", post(mock_chat))
+        .route("/embeddings", post(mock_embed))
+        .with_state(state.clone());
+    (router, state)
+}
+
+fn gateway_client(base: String, redis: RedisPool) -> Arc<GatewayClient> {
+    GatewayClient::new(
+        GatewayConfig {
+            base_url: base,
+            master_key: None,
+        },
+        redis,
+    )
+}
+
+async fn redis_ready() -> Option<RedisPool> {
+    let _ = dotenvy::dotenv();
+    let url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".into());
+    let pool = cache::init_pool(&url).ok()?;
+    cache::verify(&pool).await.ok()?;
+    Some(pool)
+}
+
+fn nonce() -> String {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos()
+        .to_string()
+}
+
+async fn hget_u64(pool: &RedisPool, key: &str, field: &str) -> u64 {
+    let mut conn = pool.get().await.unwrap();
+    let value: Option<String> = deadpool_redis::redis::cmd("HGET")
+        .arg(key)
+        .arg(field)
+        .query_async(&mut conn)
+        .await
+        .unwrap();
+    value.and_then(|s| s.parse().ok()).unwrap_or(0)
+}
+
+fn completion_req(model: &str, content: &str) -> CompletionRequest {
+    CompletionRequest {
+        model: model.to_string(),
+        messages: vec![ChatMessage {
+            role: "user".to_string(),
+            content: content.to_string(),
+        }],
+        params: serde_json::Map::new(),
+    }
+}
+
+#[tokio::test]
+async fn completion_cache_miss_calls_proxy() {
+    let Some(redis) = redis_ready().await else {
+        eprintln!("SKIP: no redis; completion_cache_miss_calls_proxy skipped");
+        return;
+    };
+    let (router, exec) = mock_exec_proxy();
+    let proxy = spawn_router(router).await;
+    let gw = gateway_client(format!("http://{proxy}"), redis);
+
+    let result = gw
+        .complete(completion_req("gpt-4o", &format!("ping {}", nonce())))
+        .await
+        .unwrap();
+
+    assert!(!result.cached);
+    assert_eq!(result.content, "hello from mock");
+    assert_eq!(exec.completion_calls.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn completion_exact_match_served_from_cache() {
+    let Some(redis) = redis_ready().await else {
+        eprintln!("SKIP: no redis; completion_exact_match_served_from_cache skipped");
+        return;
+    };
+    let (router, exec) = mock_exec_proxy();
+    let proxy = spawn_router(router).await;
+    let gw = gateway_client(format!("http://{proxy}"), redis);
+    let req = completion_req("gpt-4o", &format!("cache me {}", nonce()));
+
+    let first = gw.complete(req.clone()).await.unwrap();
+    assert!(!first.cached);
+    let second = gw.complete(req.clone()).await.unwrap();
+    assert!(second.cached);
+    assert_eq!(second.content, first.content);
+    // The proxy was hit exactly once across both calls.
+    assert_eq!(exec.completion_calls.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn completion_counters_increment_per_billed_request() {
+    let Some(redis) = redis_ready().await else {
+        eprintln!("SKIP: no redis; completion_counters_increment_per_billed_request skipped");
+        return;
+    };
+    let (router, _exec) = mock_exec_proxy();
+    let proxy = spawn_router(router).await;
+    let gw = gateway_client(format!("http://{proxy}"), redis.clone());
+
+    // Unique model id → its counter hash starts empty.
+    let model = format!("test-model-{}", nonce());
+    let req = completion_req(&model, "count me");
+
+    let _ = gw.complete(req.clone()).await.unwrap(); // billed miss
+    let _ = gw.complete(req.clone()).await.unwrap(); // cache hit (not billed)
+
+    let model_key = format!("usage:model:{model}");
+    assert_eq!(hget_u64(&redis, &model_key, "prompt_tokens").await, 5);
+    assert_eq!(hget_u64(&redis, &model_key, "completion_tokens").await, 3);
+    assert_eq!(hget_u64(&redis, &model_key, "requests").await, 1);
+}
+
+#[tokio::test]
+async fn invalid_model_for_provider_returns_gw002() {
+    let Some(redis) = redis_ready().await else {
+        eprintln!("SKIP: no redis; invalid_model_for_provider_returns_gw002 skipped");
+        return;
+    };
+    let (router, _exec) = mock_exec_proxy();
+    let proxy = spawn_router(router).await;
+    let gw = gateway_client(format!("http://{proxy}"), redis);
+
+    let err = gw
+        .complete(completion_req("invalid-model", &format!("x {}", nonce())))
+        .await
+        .unwrap_err();
+    assert_eq!(err.code(), "GW002");
+}
+
+#[tokio::test]
+async fn embedding_returns_vector() {
+    let Some(redis) = redis_ready().await else {
+        eprintln!("SKIP: no redis; embedding_returns_vector skipped");
+        return;
+    };
+    let (router, exec) = mock_exec_proxy();
+    let proxy = spawn_router(router).await;
+    let gw = gateway_client(format!("http://{proxy}"), redis);
+
+    let result = gw
+        .embed(EmbeddingRequest {
+            model: "text-embedding-3-small".to_string(),
+            input: format!("embed me {}", nonce()),
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(result.embedding.len(), 3);
+    assert_eq!(exec.embedding_calls.load(Ordering::SeqCst), 1);
 }
