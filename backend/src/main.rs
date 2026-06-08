@@ -41,8 +41,9 @@ async fn main() -> anyhow::Result<()> {
         e
     })?;
 
-    // --- Auth: build Clerk auth state (JWKS warmed in stage 3 boot wiring) ---
+    // --- Auth: build Clerk auth state and warm the JWKS cache (non-fatal) ---
     let auth = AuthState::new(config.clerk.clone());
+    auth.jwks.warm().await;
 
     let state = AppState {
         db,

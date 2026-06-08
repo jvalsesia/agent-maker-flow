@@ -13,7 +13,7 @@ pub fn build_router(state: AppState) -> Router {
     let cors = build_cors(&state.config.frontend_origin);
 
     Router::new()
-        .nest("/api/v1", routes::router())
+        .nest("/api/v1", routes::router(state.clone()))
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .with_state(state)
