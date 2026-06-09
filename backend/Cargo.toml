@@ -17,6 +17,9 @@ sqlx = { version = "0.8", features = [
     "chrono",
 ] }
 
+# Embedding storage (F05): bind Vec<f32> to the pgvector `vector` column.
+pgvector = { version = "0.4", features = ["sqlx"] }
+
 redis = { version = "0.27", features = ["tokio-comp"] }
 deadpool-redis = "0.18"
 
