@@ -41,6 +41,29 @@ pub async fn insert(pool: &PgPool, owner_id: &str, input: &AgentInput) -> Result
         .map_err(|e| internal(e, "failed to insert agent"))
 }
 
+/// Whether the caller already has an agent with this name (case-insensitive).
+/// `exclude_id` skips a given row so an update can keep its own name.
+pub async fn name_exists(
+    pool: &PgPool,
+    owner_id: &str,
+    name: &str,
+    exclude_id: Option<Uuid>,
+) -> Result<bool, AppError> {
+    let exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM agents \
+         WHERE owner_id = $1 AND lower(name) = lower($2) \
+         AND ($3::uuid IS NULL OR id <> $3))",
+    )
+    .bind(owner_id)
+    .bind(name)
+    .bind(exclude_id)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| internal(e, "failed to check agent name uniqueness"))?;
+
+    Ok(exists)
+}
+
 /// List the caller's agents, ordered by name ascending.
 pub async fn list_by_owner(pool: &PgPool, owner_id: &str) -> Result<Vec<Agent>, AppError> {
     let sql = format!("SELECT {COLUMNS} FROM agents WHERE owner_id = $1 ORDER BY name ASC");

@@ -5,13 +5,14 @@
 //! additional mount points here for later features (F03–F10).
 
 use axum::middleware::from_fn_with_state;
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::Router;
 
 use crate::auth::require_auth;
 use crate::state::AppState;
 use crate::sse;
 
+pub mod agents;
 pub mod health;
 pub mod me;
 pub mod providers;
@@ -25,6 +26,11 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/me", get(me::me))
         .route("/providers", get(providers::list_providers))
         .route("/providers/{provider}/models", get(providers::list_models))
+        .route("/agents", post(agents::create).get(agents::list))
+        .route(
+            "/agents/{id}",
+            get(agents::get).put(agents::update).delete(agents::delete),
+        )
         .route("/sse/heartbeat", get(sse::heartbeat))
         .route_layer(from_fn_with_state(state, require_auth));
 

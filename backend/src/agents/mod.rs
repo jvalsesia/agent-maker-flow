@@ -4,11 +4,12 @@
 //! prompt, provider/model, and the recent-N / top-K history and retrieval caps.
 //! The system of record consumed by F07 (Flow Canvas) and F09 (Flow Execution).
 //!
-//! This stage provides the data model and the owner-scoped sqlx repository; the
-//! validation/uniqueness/gateway service and HTTP routes are added in later
-//! F04 stages.
+//! The data model and the owner-scoped sqlx repository, the validation /
+//! uniqueness / gateway service, and (mounted in `routes/agents.rs`) the
+//! protected CRUD endpoints.
 
 pub mod model;
 pub mod repo;
+pub mod service;
 
 pub use model::{Agent, AgentInput};

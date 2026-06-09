@@ -39,6 +39,23 @@ pub enum AppError {
     #[error("{0}")]
     ProviderError(String),
 
+    /// A request field failed validation; `message` carries the field-specific
+    /// text and `code` the stable machine code (e.g. `AGENT_VALIDATION`) (F04).
+    #[error("{message}")]
+    Validation {
+        code: &'static str,
+        message: String,
+    },
+
+    /// A uniqueness/conflict constraint was violated; `message` is the
+    /// user-facing text, `code` the stable machine code (e.g.
+    /// `AGENT_NAME_TAKEN`) (F04).
+    #[error("{message}")]
+    Conflict {
+        code: &'static str,
+        message: String,
+    },
+
     /// Any other internal failure.
     #[error(transparent)]
     Internal(#[from] anyhow::Error),
@@ -55,6 +72,8 @@ impl AppError {
             AppError::GatewayUnavailable => "GW001",
             AppError::InvalidModelForProvider => "GW002",
             AppError::ProviderError(_) => "GW003",
+            AppError::Validation { code, .. } => code,
+            AppError::Conflict { code, .. } => code,
             AppError::Internal(_) => "INTERNAL001",
         }
     }
@@ -69,6 +88,8 @@ impl AppError {
             AppError::GatewayUnavailable => StatusCode::SERVICE_UNAVAILABLE,
             AppError::InvalidModelForProvider => StatusCode::UNPROCESSABLE_ENTITY,
             AppError::ProviderError(_) => StatusCode::BAD_GATEWAY,
+            AppError::Validation { .. } => StatusCode::UNPROCESSABLE_ENTITY,
+            AppError::Conflict { .. } => StatusCode::CONFLICT,
             AppError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
