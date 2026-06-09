@@ -101,6 +101,18 @@ impl GatewayClient {
             Ok(Some(models))
         }
     }
+
+    /// Find a model by id across all providers, or `None` if not in the
+    /// catalog. Used to validate a selected model (e.g. F05 embedding-model
+    /// settings) without knowing its provider up front.
+    pub async fn find_model(&self, model_id: &str) -> Result<Option<Model>, AppError> {
+        Ok(self
+            .list_models_all()
+            .await?
+            .into_iter()
+            .find(|(_, m)| m.id == model_id)
+            .map(|(_, m)| m))
+    }
 }
 
 #[cfg(test)]

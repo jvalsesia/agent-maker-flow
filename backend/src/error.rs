@@ -56,6 +56,15 @@ pub enum AppError {
         message: String,
     },
 
+    /// A memory record exceeds the maximum length (F05).
+    #[error("Memory record must be 8000 characters or fewer.")]
+    MemoryRecordTooLarge,
+
+    /// No global embedding model is configured; one must be set before memory
+    /// records can be embedded and stored (F05).
+    #[error("No embedding model is configured. Set a global embedding model first.")]
+    NoEmbeddingModel,
+
     /// Any other internal failure.
     #[error(transparent)]
     Internal(#[from] anyhow::Error),
@@ -74,6 +83,8 @@ impl AppError {
             AppError::ProviderError(_) => "GW003",
             AppError::Validation { code, .. } => code,
             AppError::Conflict { code, .. } => code,
+            AppError::MemoryRecordTooLarge => "MEM001",
+            AppError::NoEmbeddingModel => "MEM002",
             AppError::Internal(_) => "INTERNAL001",
         }
     }
@@ -90,6 +101,8 @@ impl AppError {
             AppError::ProviderError(_) => StatusCode::BAD_GATEWAY,
             AppError::Validation { .. } => StatusCode::UNPROCESSABLE_ENTITY,
             AppError::Conflict { .. } => StatusCode::CONFLICT,
+            AppError::MemoryRecordTooLarge => StatusCode::UNPROCESSABLE_ENTITY,
+            AppError::NoEmbeddingModel => StatusCode::CONFLICT,
             AppError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

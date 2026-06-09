@@ -11,6 +11,7 @@ pub mod config;
 pub mod db;
 pub mod error;
 pub mod gateway;
+pub mod memory;
 pub mod routes;
 pub mod sse;
 pub mod state;
