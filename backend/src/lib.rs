@@ -3,6 +3,7 @@
 //! Exposes the foundation modules so both the binary and integration tests can
 //! build the application and its shared state.
 
+pub mod agents;
 pub mod app;
 pub mod auth;
 pub mod cache;
