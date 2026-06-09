@@ -5,7 +5,7 @@
 //! additional mount points here for later features (F03–F10).
 
 use axum::middleware::from_fn_with_state;
-use axum::routing::{get, post};
+use axum::routing::{get, post, put};
 use axum::Router;
 
 use crate::auth::require_auth;
@@ -15,7 +15,9 @@ use crate::sse;
 pub mod agents;
 pub mod health;
 pub mod me;
+pub mod memory;
 pub mod providers;
+pub mod settings;
 
 /// Build the `/api/v1` sub-router. The protected group carries the auth layer;
 /// the public group (health) stays reachable without a token.
@@ -31,6 +33,18 @@ pub fn router(state: AppState) -> Router<AppState> {
             "/agents/{id}",
             get(agents::get).put(agents::update).delete(agents::delete),
         )
+        .route(
+            "/agents/{id}/semantic-profile",
+            get(settings::get_semantic_profile)
+                .put(settings::set_semantic_profile)
+                .delete(settings::delete_semantic_profile),
+        )
+        .route(
+            "/settings/embedding",
+            get(settings::get_embedding).put(settings::set_embedding),
+        )
+        .route("/memory", get(memory::list).post(memory::create))
+        .route("/memory/{id}", put(memory::update).delete(memory::delete))
         .route("/sse/heartbeat", get(sse::heartbeat))
         .route_layer(from_fn_with_state(state, require_auth));
 
