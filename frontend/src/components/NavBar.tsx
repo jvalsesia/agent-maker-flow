@@ -7,8 +7,8 @@ const linkStyle = ({ isActive }: { isActive: boolean }): React.CSSProperties => 
   marginRight: "1rem",
 });
 
-/** Primary navigation between the Agents and Flows workspaces, plus the Clerk
- * session/sign-out control. */
+/** Primary navigation between the Agents, Flows, and Settings workspaces, plus
+ * the Clerk session/sign-out control. */
 export function NavBar() {
   return (
     <nav aria-label="Primary">
@@ -17,6 +17,9 @@ export function NavBar() {
       </NavLink>
       <NavLink to="/flows" style={linkStyle}>
         Flows
+      </NavLink>
+      <NavLink to="/settings" style={linkStyle}>
+        Settings
       </NavLink>
       <UserButton afterSignOutUrl="/sign-in" />
     </nav>

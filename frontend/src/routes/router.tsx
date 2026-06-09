@@ -4,6 +4,7 @@ import { RequireAuth } from "../auth/RequireAuth";
 import { AppShell } from "../components/AppShell";
 import { AgentsPage } from "../pages/AgentsPage";
 import { FlowsPage } from "../pages/FlowsPage";
+import { SettingsPage } from "../pages/SettingsPage";
 import { SignInPage } from "../pages/SignInPage";
 import { SignUpPage } from "../pages/SignUpPage";
 
@@ -26,6 +27,7 @@ export const routes: RouteObject[] = [
       { index: true, element: <Navigate to="/agents" replace /> },
       { path: "agents", element: <AgentsPage /> },
       { path: "flows", element: <FlowsPage /> },
+      { path: "settings", element: <SettingsPage /> },
     ],
   },
 ];
