@@ -42,12 +42,13 @@ pub struct FlowNode {
     pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
-/// A persisted flow: a name and the full graph owned by one user.
+/// A persisted flow: a name and the full graph owned by one user. The `graph`
+/// column is `jsonb`; `Json<FlowGraph>` decodes it directly and serializes
+/// transparently to the inner graph in the response envelope.
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct Flow {
     pub id: Uuid,
     pub name: String,
-    #[sqlx(json)]
     pub graph: Json<FlowGraph>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -63,11 +64,14 @@ pub struct FlowSummary {
 }
 
 /// Save (create) / re-save (update) request body. Both endpoints fully replace
-/// the editable fields; the service validates the name and graph.
+/// the editable fields. The graph arrives as an opaque [`serde_json::Value`] so
+/// the service can structurally validate it (and reject a malformed payload as
+/// `FLOW_VALIDATION` rather than a bare extractor 400) before it is stored
+/// verbatim; reads decode it into the typed [`FlowGraph`].
 #[derive(Debug, Clone, Deserialize)]
 pub struct FlowInput {
     pub name: String,
-    pub graph: FlowGraph,
+    pub graph: serde_json::Value,
 }
 
 /// Rename request body — name only; the graph is untouched.

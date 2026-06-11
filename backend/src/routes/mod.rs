@@ -13,6 +13,7 @@ use crate::state::AppState;
 use crate::sse;
 
 pub mod agents;
+pub mod flows;
 pub mod health;
 pub mod me;
 pub mod memory;
@@ -32,6 +33,14 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route(
             "/agents/{id}",
             get(agents::get).put(agents::update).delete(agents::delete),
+        )
+        .route("/flows", post(flows::create).get(flows::list))
+        .route(
+            "/flows/{id}",
+            get(flows::get)
+                .put(flows::update)
+                .patch(flows::rename)
+                .delete(flows::delete),
         )
         .route(
             "/agents/{id}/semantic-profile",

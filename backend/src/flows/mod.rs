@@ -6,11 +6,12 @@
 //! with no transformation. The persistence seam between F07 (produces the
 //! graph) and F09 (executes a saved graph).
 //!
-//! The data model and the owner-scoped sqlx repository land in stage 1; the
-//! validation / uniqueness service and the protected CRUD + rename endpoints
-//! (`routes/flows.rs`) follow in later stages.
+//! The data model, the owner-scoped sqlx repository, and the validation /
+//! uniqueness service; the protected CRUD + rename endpoints live in
+//! `routes/flows.rs`.
 
 pub mod model;
 pub mod repo;
+pub mod service;
 
 pub use model::{Flow, FlowGraph, FlowInput, FlowSummary, RenameInput};
