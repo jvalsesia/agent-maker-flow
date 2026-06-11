@@ -26,6 +26,8 @@ export interface UseFlowGraph {
   duplicateNode: (nodeId: string) => void;
   detachNode: (nodeId: string) => void;
   setRoot: (nodeId: string) => void;
+  /** Replace the whole canvas with a saved graph (F08 open). */
+  load: (graph: FlowGraph) => void;
 }
 
 /**
@@ -92,6 +94,15 @@ export function useFlowGraph(initial?: FlowGraph): UseFlowGraph {
     setRootNodeId(nodeId);
   }, []);
 
+  const load = useCallback(
+    (next: FlowGraph) => {
+      setNodes(next.nodes);
+      setEdges(next.edges);
+      setRootNodeId(next.rootNodeId);
+    },
+    [setNodes, setEdges],
+  );
+
   return {
     nodes,
     edges,
@@ -105,5 +116,6 @@ export function useFlowGraph(initial?: FlowGraph): UseFlowGraph {
     duplicateNode,
     detachNode,
     setRoot,
+    load,
   };
 }
