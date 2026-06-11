@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { apiGet } from "./apiClient";
+import { apiGet, apiPatch } from "./apiClient";
 import { setTokenGetter } from "./authToken";
 
 afterEach(() => {
@@ -67,5 +67,18 @@ describe("apiClient", () => {
     );
 
     await expect(apiGet("/me")).rejects.toMatchObject({ code: "AUTH001" });
+  });
+
+  it("sends a PATCH with the serialized body and returns data", async () => {
+    const fetchMock = mockJson({ status: "success", data: { id: "flow-1", name: "Renamed" } }, 200);
+
+    const data = await apiPatch<{ id: string; name: string }>("/flows/flow-1", {
+      name: "Renamed",
+    });
+
+    expect(data).toEqual({ id: "flow-1", name: "Renamed" });
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(init.method).toBe("PATCH");
+    expect(init.body).toBe(JSON.stringify({ name: "Renamed" }));
   });
 });
