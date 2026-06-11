@@ -4,9 +4,11 @@
 //! run fail-fast connectivity checks and migrations, then bind and serve.
 //! The full `/api/v1` router and SSE base are mounted in stage 3.
 
+use std::sync::Arc;
+
 use agent_maker_flow_backend::{
-    app, auth::AuthState, cache, config::AppConfig, db, gateway::GatewayClient, state::AppState,
-    telemetry,
+    app, auth::AuthState, cache, config::AppConfig, db, gateway::GatewayClient,
+    runs::RunRegistry, state::AppState, telemetry,
 };
 use anyhow::Context;
 use tokio::net::TcpListener;
@@ -49,12 +51,15 @@ async fn main() -> anyhow::Result<()> {
     // --- Gateway: build the LiteLLM client (availability checked at call time) ---
     let gateway = GatewayClient::new(config.gateway.clone(), redis.clone());
 
+    let runs = Arc::new(RunRegistry::new());
+
     let state = AppState {
         db,
         redis,
         config: config.clone(),
         auth,
         gateway,
+        runs,
     };
 
     let router = app::build_router(state);

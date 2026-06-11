@@ -122,6 +122,7 @@ fn build_state(db: PgPool) -> AppState {
         },
         auth,
         gateway: GatewayClient::new(gateway_config, redis),
+        runs: std::sync::Arc::new(agent_maker_flow_backend::runs::RunRegistry::new()),
     }
 }
 

@@ -18,6 +18,7 @@ pub mod health;
 pub mod me;
 pub mod memory;
 pub mod providers;
+pub mod runs;
 pub mod settings;
 
 /// Build the `/api/v1` sub-router. The protected group carries the auth layer;
@@ -54,6 +55,9 @@ pub fn router(state: AppState) -> Router<AppState> {
         )
         .route("/memory", get(memory::list).post(memory::create))
         .route("/memory/{id}", put(memory::update).delete(memory::delete))
+        .route("/runs", post(runs::start))
+        .route("/runs/{run_id}", get(runs::snapshot))
+        .route("/runs/{run_id}/events", get(runs::events))
         .route("/sse/heartbeat", get(sse::heartbeat))
         .route_layer(from_fn_with_state(state, require_auth));
 

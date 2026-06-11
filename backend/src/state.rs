@@ -8,10 +8,12 @@ use sqlx::PgPool;
 use crate::auth::AuthState;
 use crate::config::AppConfig;
 use crate::gateway::GatewayClient;
+use crate::runs::RunRegistry;
 
 /// Carries the database pool, cache pool, configuration, authentication state,
-/// and the LLM gateway client. Cheap to clone (pools, config, and the
-/// `Arc`-wrapped auth/gateway handles are reference-counted).
+/// the LLM gateway client, and the F09 in-memory run registry. Cheap to
+/// clone (pools, config, and the `Arc`-wrapped auth/gateway/runs handles are
+/// reference-counted).
 #[derive(Clone)]
 pub struct AppState {
     pub db: PgPool,
@@ -19,4 +21,5 @@ pub struct AppState {
     pub config: AppConfig,
     pub auth: Arc<AuthState>,
     pub gateway: Arc<GatewayClient>,
+    pub runs: Arc<RunRegistry>,
 }

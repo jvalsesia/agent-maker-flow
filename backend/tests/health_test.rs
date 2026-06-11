@@ -4,6 +4,8 @@
 
 use std::net::SocketAddr;
 
+use std::sync::Arc;
+
 use agent_maker_flow_backend::{
     app,
     auth::AuthState,
@@ -11,6 +13,7 @@ use agent_maker_flow_backend::{
     config::{AppConfig, ClerkConfig, GatewayConfig},
     db,
     gateway::GatewayClient,
+    runs::RunRegistry,
     state::AppState,
 };
 
@@ -46,6 +49,7 @@ async fn try_state() -> Option<AppState> {
         },
         auth: AuthState::new(clerk),
         gateway: GatewayClient::new(gateway, redis),
+        runs: Arc::new(RunRegistry::new()),
     })
 }
 
