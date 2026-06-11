@@ -65,6 +65,20 @@ pub enum AppError {
     #[error("No embedding model is configured. Set a global embedding model first.")]
     NoEmbeddingModel,
 
+    /// The submitted flow graph is not a valid DAG: empty, cyclic, missing the
+    /// root, multi-rooted, or otherwise unsuitable for execution (F09).
+    #[error("Flow is not a valid DAG; fix the graph and rerun.")]
+    RunInvalidGraph,
+
+    /// A run is already in progress for the same `flowId` (F09).
+    #[error("A run is already in progress for this flow.")]
+    RunInProgress,
+
+    /// One of the graph's nodes references an agent that no longer exists
+    /// (F09 pre-resolution).
+    #[error("A node references an agent that no longer exists.")]
+    RunAgentMissing,
+
     /// Any other internal failure.
     #[error(transparent)]
     Internal(#[from] anyhow::Error),
@@ -85,6 +99,9 @@ impl AppError {
             AppError::Conflict { code, .. } => code,
             AppError::MemoryRecordTooLarge => "MEM001",
             AppError::NoEmbeddingModel => "MEM002",
+            AppError::RunInvalidGraph => "RUN001",
+            AppError::RunInProgress => "RUN002",
+            AppError::RunAgentMissing => "RUN003",
             AppError::Internal(_) => "INTERNAL001",
         }
     }
@@ -103,6 +120,9 @@ impl AppError {
             AppError::Conflict { .. } => StatusCode::CONFLICT,
             AppError::MemoryRecordTooLarge => StatusCode::UNPROCESSABLE_ENTITY,
             AppError::NoEmbeddingModel => StatusCode::CONFLICT,
+            AppError::RunInvalidGraph => StatusCode::UNPROCESSABLE_ENTITY,
+            AppError::RunInProgress => StatusCode::CONFLICT,
+            AppError::RunAgentMissing => StatusCode::UNPROCESSABLE_ENTITY,
             AppError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
