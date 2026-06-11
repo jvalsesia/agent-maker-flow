@@ -100,12 +100,20 @@ pub struct UsageSummary {
 }
 
 /// One event with its per-run monotonic sequence id. The `seq` is the SSE
-/// `id:` value used by `Last-Event-ID` to resume.
+/// `id:` value used by `Last-Event-ID` to resume; `event` flattens its
+/// own `event:` tag and payload fields up into the JSON envelope.
 #[derive(Debug, Clone, Serialize)]
 pub struct SeqEvent {
     pub seq: u64,
     #[serde(flatten)]
     pub event: ExecutionEvent,
+}
+
+impl SeqEvent {
+    /// SSE `event:` name (delegated to the inner variant).
+    pub fn name(&self) -> &'static str {
+        self.event.name()
+    }
 }
 
 /// The tagged execution-event enum streamed to SSE clients. Each variant
