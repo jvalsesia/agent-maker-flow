@@ -21,7 +21,7 @@ pub mod registry;
 pub mod service;
 
 pub use model::{
-    ExecutionEvent, NodeOutcome, RunRequest, RunStatus, SeqEvent, RUN_STARTED, RUN_FINISHED,
-    NODE_STARTED, NODE_PARTIAL, NODE_COMPLETED, NODE_FAILED, NODE_SKIPPED,
+    ExecutionEvent, NodeOutcome, RunRequest, RunStatus, SeqEvent, NODE_COMPLETED, NODE_FAILED,
+    NODE_PARTIAL, NODE_SKIPPED, NODE_STARTED, RUN_FINISHED, RUN_STARTED,
 };
 pub use registry::RunRegistry;

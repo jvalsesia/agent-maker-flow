@@ -134,8 +134,10 @@ fn build_state(db: PgPool, gateway_base: String) -> AppState {
         authorized_parties: vec![AZP.to_string()],
     };
     let auth = AuthState::new(clerk.clone());
-    auth.jwks
-        .insert_key(TEST_KID, DecodingKey::from_rsa_pem(PUB_PEM).expect("decoding key"));
+    auth.jwks.insert_key(
+        TEST_KID,
+        DecodingKey::from_rsa_pem(PUB_PEM).expect("decoding key"),
+    );
 
     let gateway_config = GatewayConfig {
         base_url: gateway_base,
@@ -295,10 +297,7 @@ async fn create_empty_name_rejected() {
     assert_eq!(resp.status(), 422);
     let err = resp.json::<Value>().await.unwrap();
     assert_eq!(err["error"]["code"], "AGENT_VALIDATION");
-    assert!(err["error"]["message"]
-        .as_str()
-        .unwrap()
-        .contains("Name"));
+    assert!(err["error"]["message"].as_str().unwrap().contains("Name"));
 }
 
 #[tokio::test]
@@ -425,9 +424,20 @@ async fn list_returns_only_owner_agents() {
     let other = make_token(&fresh_owner("listother"));
 
     // Owner creates two (out of alphabetical order); the other user creates one.
-    assert_eq!(post_agent(addr, &owner, &full_body("Zeta")).await.status(), 201);
-    assert_eq!(post_agent(addr, &owner, &full_body("Alpha")).await.status(), 201);
-    assert_eq!(post_agent(addr, &other, &full_body("Foreign")).await.status(), 201);
+    assert_eq!(
+        post_agent(addr, &owner, &full_body("Zeta")).await.status(),
+        201
+    );
+    assert_eq!(
+        post_agent(addr, &owner, &full_body("Alpha")).await.status(),
+        201
+    );
+    assert_eq!(
+        post_agent(addr, &other, &full_body("Foreign"))
+            .await
+            .status(),
+        201
+    );
 
     let resp = reqwest::Client::new()
         .get(format!("http://{addr}/api/v1/agents"))

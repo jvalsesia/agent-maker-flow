@@ -128,7 +128,10 @@ async fn mock_model_info() -> Json<Value> {
     }))
 }
 
-async fn mock_embed(State(s): State<ProxyState>, Json(_body): Json<Value>) -> axum::response::Response {
+async fn mock_embed(
+    State(s): State<ProxyState>,
+    Json(_body): Json<Value>,
+) -> axum::response::Response {
     s.embed_calls.fetch_add(1, Ordering::SeqCst);
     if s.fail_embed {
         return (
@@ -177,8 +180,10 @@ fn build_state(db: PgPool, gateway_base: String) -> AppState {
         authorized_parties: vec![AZP.to_string()],
     };
     let auth = AuthState::new(clerk.clone());
-    auth.jwks
-        .insert_key(TEST_KID, DecodingKey::from_rsa_pem(PUB_PEM).expect("decoding key"));
+    auth.jwks.insert_key(
+        TEST_KID,
+        DecodingKey::from_rsa_pem(PUB_PEM).expect("decoding key"),
+    );
 
     let gateway_config = GatewayConfig {
         base_url: gateway_base,
@@ -333,7 +338,10 @@ async fn set_and_get_global_embedding_model() {
         .send()
         .await
         .unwrap();
-    assert_eq!(get.json::<Value>().await.unwrap()["data"]["embedding_model"], EMBED_MODEL);
+    assert_eq!(
+        get.json::<Value>().await.unwrap()["data"]["embedding_model"],
+        EMBED_MODEL
+    );
 }
 
 #[tokio::test]
@@ -361,7 +369,10 @@ async fn create_memory_record_embeds_and_stores() {
     };
     let (addr, calls) = spawn_with_proxy(db, false).await;
     let token = make_token(&fresh_user("create"));
-    assert_eq!(set_global_model(addr, &token, EMBED_MODEL).await.status(), 200);
+    assert_eq!(
+        set_global_model(addr, &token, EMBED_MODEL).await.status(),
+        200
+    );
 
     let resp = create_memory(addr, &token, "Our return policy allows 30 days.").await;
     assert_eq!(resp.status(), 201);
@@ -384,7 +395,10 @@ async fn stored_records_retain_vector_and_model_for_f06() {
     let (addr, _) = spawn_with_proxy(db, false).await;
     let user = fresh_user("f06");
     let token = make_token(&user);
-    assert_eq!(set_global_model(addr, &token, EMBED_MODEL).await.status(), 200);
+    assert_eq!(
+        set_global_model(addr, &token, EMBED_MODEL).await.status(),
+        200
+    );
     assert_eq!(create_memory(addr, &token, "vector me").await.status(), 201);
 
     // F06 filters comparable vectors by (user_id, embedding_model); the row must
@@ -409,7 +423,10 @@ async fn create_memory_record_too_large_rejected() {
     };
     let (addr, _) = spawn_with_proxy(db, false).await;
     let token = make_token(&fresh_user("toolarge"));
-    assert_eq!(set_global_model(addr, &token, EMBED_MODEL).await.status(), 200);
+    assert_eq!(
+        set_global_model(addr, &token, EMBED_MODEL).await.status(),
+        200
+    );
 
     let resp = create_memory(addr, &token, &"a".repeat(8001)).await;
     assert_eq!(resp.status(), 422);
@@ -447,7 +464,10 @@ async fn create_memory_record_embedding_failure_not_stored() {
     };
     let (addr, _) = spawn_with_proxy(db, true).await; // embeddings return 500
     let token = make_token(&fresh_user("embedfail"));
-    assert_eq!(set_global_model(addr, &token, EMBED_MODEL).await.status(), 200);
+    assert_eq!(
+        set_global_model(addr, &token, EMBED_MODEL).await.status(),
+        200
+    );
 
     let resp = create_memory(addr, &token, "this should not persist").await;
     assert_eq!(resp.status(), 502);
@@ -469,10 +489,22 @@ async fn list_memory_returns_only_owner_records() {
     let (addr, _) = spawn_with_proxy(db, false).await;
     let owner = make_token(&fresh_user("listowner"));
     let other = make_token(&fresh_user("listother"));
-    assert_eq!(set_global_model(addr, &owner, EMBED_MODEL).await.status(), 200);
-    assert_eq!(set_global_model(addr, &other, EMBED_MODEL).await.status(), 200);
-    assert_eq!(create_memory(addr, &owner, "owner record").await.status(), 201);
-    assert_eq!(create_memory(addr, &other, "other record").await.status(), 201);
+    assert_eq!(
+        set_global_model(addr, &owner, EMBED_MODEL).await.status(),
+        200
+    );
+    assert_eq!(
+        set_global_model(addr, &other, EMBED_MODEL).await.status(),
+        200
+    );
+    assert_eq!(
+        create_memory(addr, &owner, "owner record").await.status(),
+        201
+    );
+    assert_eq!(
+        create_memory(addr, &other, "other record").await.status(),
+        201
+    );
 
     let body = list_memory(addr, &owner).await;
     let records = body["data"]["records"].as_array().unwrap();
@@ -489,7 +521,10 @@ async fn update_memory_record_reembeds() {
     };
     let (addr, calls) = spawn_with_proxy(db, false).await;
     let token = make_token(&fresh_user("update"));
-    assert_eq!(set_global_model(addr, &token, EMBED_MODEL).await.status(), 200);
+    assert_eq!(
+        set_global_model(addr, &token, EMBED_MODEL).await.status(),
+        200
+    );
     let created = create_memory(addr, &token, "original text").await;
     let id = created.json::<Value>().await.unwrap()["data"]["id"]
         .as_str()
@@ -521,7 +556,10 @@ async fn delete_memory_record() {
     let (addr, _) = spawn_with_proxy(db, false).await;
     let owner = make_token(&fresh_user("delowner"));
     let other = make_token(&fresh_user("delother"));
-    assert_eq!(set_global_model(addr, &owner, EMBED_MODEL).await.status(), 200);
+    assert_eq!(
+        set_global_model(addr, &owner, EMBED_MODEL).await.status(),
+        200
+    );
     let created = create_memory(addr, &owner, "to be deleted").await;
     let id = created.json::<Value>().await.unwrap()["data"]["id"]
         .as_str()
@@ -559,7 +597,9 @@ async fn set_semantic_profile_overrides_model() {
     let agent_id = create_agent(addr, &token).await;
 
     let resp = client()
-        .put(format!("http://{addr}/api/v1/agents/{agent_id}/semantic-profile"))
+        .put(format!(
+            "http://{addr}/api/v1/agents/{agent_id}/semantic-profile"
+        ))
         .bearer_auth(&token)
         .json(&json!({ "embedding_model": EMBED_MODEL, "memory_scope": "own" }))
         .send()
@@ -573,11 +613,16 @@ async fn set_semantic_profile_overrides_model() {
 
     // Read back.
     let get = client()
-        .get(format!("http://{addr}/api/v1/agents/{agent_id}/semantic-profile"))
+        .get(format!(
+            "http://{addr}/api/v1/agents/{agent_id}/semantic-profile"
+        ))
         .bearer_auth(&token)
         .send()
         .await
         .unwrap();
     assert_eq!(get.status(), 200);
-    assert_eq!(get.json::<Value>().await.unwrap()["data"]["memory_scope"], "own");
+    assert_eq!(
+        get.json::<Value>().await.unwrap()["data"]["memory_scope"],
+        "own"
+    );
 }

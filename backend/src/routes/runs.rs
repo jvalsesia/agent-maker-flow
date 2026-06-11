@@ -58,8 +58,10 @@ pub async fn events(
     user: AuthUser,
     Path(run_id): Path<Uuid>,
     headers: HeaderMap,
-) -> Result<Sse<impl futures::Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>>, AppError>
-{
+) -> Result<
+    Sse<impl futures::Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>>,
+    AppError,
+> {
     let last_event_id = parse_last_event_id(&headers);
     let subscription = state.runs.subscribe(run_id, &user.id, last_event_id)?;
     let stream = service::into_sse_stream(subscription);

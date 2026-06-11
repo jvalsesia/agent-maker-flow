@@ -9,8 +9,8 @@ use axum::routing::{get, post, put};
 use axum::Router;
 
 use crate::auth::require_auth;
-use crate::state::AppState;
 use crate::sse;
+use crate::state::AppState;
 
 pub mod agents;
 pub mod flows;

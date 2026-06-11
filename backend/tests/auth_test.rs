@@ -101,8 +101,10 @@ fn build_state(db: PgPool) -> AppState {
         authorized_parties: vec![AZP.to_string()],
     };
     let auth = AuthState::new(clerk.clone());
-    auth.jwks
-        .insert_key(TEST_KID, DecodingKey::from_rsa_pem(PUB_PEM).expect("decoding key"));
+    auth.jwks.insert_key(
+        TEST_KID,
+        DecodingKey::from_rsa_pem(PUB_PEM).expect("decoding key"),
+    );
 
     let gateway_config = GatewayConfig {
         base_url: "http://localhost:4000".to_string(),
@@ -156,7 +158,9 @@ async fn spawn(state: AppState) -> SocketAddr {
 #[tokio::test]
 async fn me_without_token_returns_401() {
     let addr = spawn(build_state(lazy_db())).await;
-    let resp = reqwest::get(format!("http://{addr}/api/v1/me")).await.unwrap();
+    let resp = reqwest::get(format!("http://{addr}/api/v1/me"))
+        .await
+        .unwrap();
     assert_eq!(resp.status(), 401);
     let body: Value = resp.json().await.unwrap();
     assert_eq!(body["status"], "error");

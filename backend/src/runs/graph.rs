@@ -312,7 +312,10 @@ mod tests {
         assert_eq!(dag.in_degree["n3"], 1);
         assert_eq!(dag.in_degree["n4"], 2);
         // Predecessors are recorded in declared edge order (n2 first, then n3).
-        assert_eq!(dag.predecessors["n4"], vec!["n2".to_string(), "n3".to_string()]);
+        assert_eq!(
+            dag.predecessors["n4"],
+            vec!["n2".to_string(), "n3".to_string()]
+        );
     }
 
     #[test]
@@ -323,6 +326,9 @@ mod tests {
             "rootNodeId": "n1"
         });
         let dag = translate(&graph).unwrap();
-        assert_eq!(dag.predecessors["n3"], vec!["n2".to_string(), "n1".to_string()]);
+        assert_eq!(
+            dag.predecessors["n3"],
+            vec!["n2".to_string(), "n1".to_string()]
+        );
     }
 }

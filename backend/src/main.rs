@@ -7,8 +7,8 @@
 use std::sync::Arc;
 
 use agent_maker_flow_backend::{
-    app, auth::AuthState, cache, config::AppConfig, db, gateway::GatewayClient,
-    runs::RunRegistry, state::AppState, telemetry,
+    app, auth::AuthState, cache, config::AppConfig, db, gateway::GatewayClient, runs::RunRegistry,
+    state::AppState, telemetry,
 };
 use anyhow::Context;
 use tokio::net::TcpListener;
@@ -69,6 +69,8 @@ async fn main() -> anyhow::Result<()> {
         .with_context(|| format!("failed to bind {}", config.bind_addr))?;
     tracing::info!(addr = %config.bind_addr, "server listening");
 
-    axum::serve(listener, router).await.context("server error")?;
+    axum::serve(listener, router)
+        .await
+        .context("server error")?;
     Ok(())
 }

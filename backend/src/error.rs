@@ -42,19 +42,13 @@ pub enum AppError {
     /// A request field failed validation; `message` carries the field-specific
     /// text and `code` the stable machine code (e.g. `AGENT_VALIDATION`) (F04).
     #[error("{message}")]
-    Validation {
-        code: &'static str,
-        message: String,
-    },
+    Validation { code: &'static str, message: String },
 
     /// A uniqueness/conflict constraint was violated; `message` is the
     /// user-facing text, `code` the stable machine code (e.g.
     /// `AGENT_NAME_TAKEN`) (F04).
     #[error("{message}")]
-    Conflict {
-        code: &'static str,
-        message: String,
-    },
+    Conflict { code: &'static str, message: String },
 
     /// A memory record exceeds the maximum length (F05).
     #[error("Memory record must be 8000 characters or fewer.")]

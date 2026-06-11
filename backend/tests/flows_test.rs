@@ -125,8 +125,10 @@ fn build_state(db: PgPool, gateway_base: String) -> AppState {
         authorized_parties: vec![AZP.to_string()],
     };
     let auth = AuthState::new(clerk.clone());
-    auth.jwks
-        .insert_key(TEST_KID, DecodingKey::from_rsa_pem(PUB_PEM).expect("decoding key"));
+    auth.jwks.insert_key(
+        TEST_KID,
+        DecodingKey::from_rsa_pem(PUB_PEM).expect("decoding key"),
+    );
 
     let gateway_config = GatewayConfig {
         base_url: gateway_base,
@@ -288,11 +290,15 @@ async fn list_returns_summaries_without_graph() {
 
     // "Older" then "Newer"; the most recently updated sorts first.
     assert_eq!(
-        post_flow(addr, &token, &flow_body("Older", &graph)).await.status(),
+        post_flow(addr, &token, &flow_body("Older", &graph))
+            .await
+            .status(),
         201
     );
     assert_eq!(
-        post_flow(addr, &token, &flow_body("Newer", &graph)).await.status(),
+        post_flow(addr, &token, &flow_body("Newer", &graph))
+            .await
+            .status(),
         201
     );
 

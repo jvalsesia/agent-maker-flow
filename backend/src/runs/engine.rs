@@ -314,7 +314,12 @@ pub async fn execute(
                     let mut guard = outputs.lock().expect("outputs lock poisoned");
                     guard.insert(report.node_id.clone(), output);
                 }
-                for successor in dag.adjacency.get(&report.node_id).cloned().unwrap_or_default() {
+                for successor in dag
+                    .adjacency
+                    .get(&report.node_id)
+                    .cloned()
+                    .unwrap_or_default()
+                {
                     let entry = remaining_in_degree.get_mut(&successor).unwrap();
                     *entry -= 1;
                     if *entry == 0 && !completed.contains_key(&successor) {
@@ -402,15 +407,8 @@ async fn execute_node(
         },
     );
 
-    let retrieval_outcome = retrieval::retrieve(
-        &db,
-        &gateway,
-        &owner_id,
-        agent.id,
-        agent.top_k,
-        &forwarded,
-    )
-    .await;
+    let retrieval_outcome =
+        retrieval::retrieve(&db, &gateway, &owner_id, agent.id, agent.top_k, &forwarded).await;
     let retrieval_text = retrieval_context(&retrieval_outcome.records);
     let messages = assemble_messages(&agent, &history, &retrieval_text, &forwarded);
 

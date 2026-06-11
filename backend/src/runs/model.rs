@@ -242,7 +242,10 @@ mod tests {
         assert_eq!(ev.name(), RUN_STARTED);
         let v = serde_json::to_value(&ev).unwrap();
         assert_eq!(v.get("event").and_then(Value::as_str), Some(RUN_STARTED));
-        assert_eq!(v.get("runId").and_then(Value::as_str), Some(id.to_string().as_str()));
+        assert_eq!(
+            v.get("runId").and_then(Value::as_str),
+            Some(id.to_string().as_str())
+        );
     }
 
     #[test]

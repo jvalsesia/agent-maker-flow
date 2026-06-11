@@ -135,8 +135,10 @@ fn build_state(db: PgPool, gateway_base: String) -> AppState {
         authorized_parties: vec![AZP.to_string()],
     };
     let auth = AuthState::new(clerk.clone());
-    auth.jwks
-        .insert_key(TEST_KID, DecodingKey::from_rsa_pem(PUB_PEM).expect("decoding key"));
+    auth.jwks.insert_key(
+        TEST_KID,
+        DecodingKey::from_rsa_pem(PUB_PEM).expect("decoding key"),
+    );
 
     let gateway_config = GatewayConfig {
         base_url: gateway_base,
@@ -300,7 +302,10 @@ struct ExecState {
     embedding_calls: Arc<AtomicUsize>,
 }
 
-async fn mock_chat(State(s): State<ExecState>, Json(body): Json<Value>) -> axum::response::Response {
+async fn mock_chat(
+    State(s): State<ExecState>,
+    Json(body): Json<Value>,
+) -> axum::response::Response {
     let model = body["model"].as_str().unwrap_or("unknown").to_string();
     if model == "invalid-model" {
         return (
@@ -319,7 +324,10 @@ async fn mock_chat(State(s): State<ExecState>, Json(body): Json<Value>) -> axum:
     ([("x-litellm-response-cost", "0.0001")], Json(resp)).into_response()
 }
 
-async fn mock_embed(State(s): State<ExecState>, Json(_body): Json<Value>) -> axum::response::Response {
+async fn mock_embed(
+    State(s): State<ExecState>,
+    Json(_body): Json<Value>,
+) -> axum::response::Response {
     s.embedding_calls.fetch_add(1, Ordering::SeqCst);
     let resp = json!({
         "model": "text-embedding-3-small",

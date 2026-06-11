@@ -23,7 +23,9 @@ async fn try_state() -> Option<AppState> {
 
     let db = db::init_pool(&database_url).await.ok()?;
     db::run_migrations(&db).await.ok()?;
-    cache::verify(&cache::init_pool(&redis_url).ok()?).await.ok()?;
+    cache::verify(&cache::init_pool(&redis_url).ok()?)
+        .await
+        .ok()?;
     let redis = cache::init_pool(&redis_url).ok()?;
 
     let clerk = ClerkConfig {

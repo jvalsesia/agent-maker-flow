@@ -176,8 +176,10 @@ fn build_state(db: PgPool, redis: RedisPool, gateway_base: String) -> AppState {
         authorized_parties: vec![AZP.to_string()],
     };
     let auth = AuthState::new(clerk.clone());
-    auth.jwks
-        .insert_key(TEST_KID, DecodingKey::from_rsa_pem(PUB_PEM).expect("decoding key"));
+    auth.jwks.insert_key(
+        TEST_KID,
+        DecodingKey::from_rsa_pem(PUB_PEM).expect("decoding key"),
+    );
 
     let gateway_config = GatewayConfig {
         base_url: gateway_base,
@@ -263,7 +265,12 @@ async fn create_agent(addr: SocketAddr, token: &str, name: &str, model: &str) ->
         .send()
         .await
         .unwrap();
-    assert_eq!(resp.status(), 201, "agent create failed: {:?}", resp.text().await);
+    assert_eq!(
+        resp.status(),
+        201,
+        "agent create failed: {:?}",
+        resp.text().await
+    );
     let body = resp.json::<Value>().await.unwrap();
     body["data"]["id"].as_str().unwrap().to_string()
 }
@@ -299,11 +306,7 @@ fn diamond_graph(a: &str, b: &str, c: &str, d: &str) -> Value {
     })
 }
 
-async fn start_run(
-    addr: SocketAddr,
-    token: &str,
-    body: &Value,
-) -> reqwest::Response {
+async fn start_run(addr: SocketAddr, token: &str, body: &Value) -> reqwest::Response {
     reqwest::Client::new()
         .post(format!("http://{addr}/api/v1/runs"))
         .bearer_auth(token)
@@ -315,12 +318,7 @@ async fn start_run(
 
 /// Poll `GET /runs/{id}` until the run is terminal or `timeout` elapses.
 /// Returns the final snapshot body.
-async fn wait_for_finish(
-    addr: SocketAddr,
-    token: &str,
-    run_id: &str,
-    timeout: Duration,
-) -> Value {
+async fn wait_for_finish(addr: SocketAddr, token: &str, run_id: &str, timeout: Duration) -> Value {
     let client = reqwest::Client::new();
     let deadline = std::time::Instant::now() + timeout;
     loop {
@@ -708,8 +706,14 @@ async fn independent_branch_continues_on_partial_failure() {
     let term_completed = events
         .iter()
         .any(|e| e["event"] == "node.completed" && e["nodeId"] == "n4");
-    assert!(term_started, "terminal node must execute despite sibling failure");
-    assert!(term_completed, "terminal node must complete despite sibling failure");
+    assert!(
+        term_started,
+        "terminal node must execute despite sibling failure"
+    );
+    assert!(
+        term_completed,
+        "terminal node must complete despite sibling failure"
+    );
 }
 
 // --- Reconnect / replay ---
