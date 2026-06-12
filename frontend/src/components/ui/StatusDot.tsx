@@ -15,8 +15,8 @@ const LABELS: Record<StatusKind, string> = {
 interface StatusDotProps {
   status: StatusKind;
   size?: "sm" | "md";
-  /** Visually-hidden status label for screen readers. Omit if a sibling text
-   * node already names the state (color is never the sole signal — spec §7). */
+  /** Status label for screen readers. Defaults to the status name; pass "" to
+   * make the dot decorative when a sibling already names the state (spec §7). */
   label?: string;
   className?: string;
 }
@@ -25,7 +25,13 @@ export function StatusDot({ status, size = "sm", label, className }: StatusDotPr
   const classes = [styles.dot, styles[size], styles[status], className]
     .filter(Boolean)
     .join(" ");
+  const name = label === "" ? undefined : (label ?? LABELS[status]);
   return (
-    <span className={classes} role="img" aria-label={label ?? LABELS[status]} />
+    <span
+      className={classes}
+      role={name ? "img" : undefined}
+      aria-label={name}
+      aria-hidden={name ? undefined : true}
+    />
   );
 }

@@ -1,8 +1,10 @@
 import type { NodeRunState } from "../../lib/runStream";
 import type { RunConnection } from "../../hooks/useRunStream";
+import { Alert, Badge } from "../ui";
 import { ConversationTurns, type ConversationTurn } from "./ConversationTurns";
 import { NodeBlock } from "./NodeBlock";
 import { PromptBar } from "./PromptBar";
+import styles from "./ConversationMonitor.module.css";
 
 interface ConversationMonitorProps {
   turns: ConversationTurn[];
@@ -18,10 +20,11 @@ interface ConversationMonitorProps {
 }
 
 /**
- * The right-split conversational monitor (F10): the prompt bar, the turn-based
- * history, the live per-node agent blocks, and a "Reconnecting…" indicator
- * shown while an active run's stream is re-establishing. Rejection notices and
- * the empty-output message arrive as `system`/`assistant` turns.
+ * The right-split conversational monitor (F10): a run-state chip, a
+ * "Reconnecting…" indicator shown while an active run's stream is
+ * re-establishing, the turn-based history, the live per-node agent blocks, and
+ * the prompt bar pinned to the bottom. Rejection notices and the empty-output
+ * message arrive as `system`/`assistant` turns.
  */
 export function ConversationMonitor({
   turns,
@@ -36,31 +39,48 @@ export function ConversationMonitor({
   const reconnecting = isRunning && connection === "connecting";
 
   return (
-    <section
-      aria-label="Conversation monitor"
-      style={{ display: "flex", flexDirection: "column", gap: 12, height: "100%" }}
-    >
-      <h3 style={{ margin: 0 }}>Monitor</h3>
+    <section className={styles.monitor} aria-label="Conversation monitor">
+      <div className={styles.header}>
+        <h3 className={styles.title}>Monitor</h3>
+        {isRunning ? (
+          <Badge variant="running" dot>
+            Running
+          </Badge>
+        ) : (
+          <Badge variant="neutral" dot>
+            Idle
+          </Badge>
+        )}
+      </div>
 
-      {reconnecting && <p role="status">Reconnecting…</p>}
-
-      <ConversationTurns turns={turns} />
-
-      {nodes.length > 0 && (
-        <div aria-label="Agent blocks">
-          {nodes.map((node) => (
-            <NodeBlock key={node.nodeId} node={node} />
-          ))}
-        </div>
+      {reconnecting && (
+        <Alert variant="warning" className={styles.reconnecting} title="Reconnecting…">
+          Re-establishing the run stream.
+        </Alert>
       )}
 
-      <PromptBar
-        prompt={prompt}
-        onPromptChange={onPromptChange}
-        onSubmit={onSubmit}
-        isRunning={isRunning}
-        disabledReason={runDisabledReason}
-      />
+      <div className={styles.scroll}>
+        <ConversationTurns turns={turns} />
+
+        {nodes.length > 0 && (
+          <div className={styles.nodes} aria-label="Agent blocks">
+            <span className={styles.nodesLabel}>Live nodes</span>
+            {nodes.map((node) => (
+              <NodeBlock key={node.nodeId} node={node} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className={styles.prompt}>
+        <PromptBar
+          prompt={prompt}
+          onPromptChange={onPromptChange}
+          onSubmit={onSubmit}
+          isRunning={isRunning}
+          disabledReason={runDisabledReason}
+        />
+      </div>
     </section>
   );
 }

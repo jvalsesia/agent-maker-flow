@@ -1,0 +1,51 @@
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Segmented control wrapping the three workspace links. */
+.segments {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--bg-inset);
+  border-radius: var(--radius-md);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  height: 28px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm-size);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition:
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+.link:hover {
+  background: var(--bg-surface-raised);
+  color: var(--text-primary);
+}
+
+.active {
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+.active:hover {
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+.controls {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
