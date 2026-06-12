@@ -20,6 +20,9 @@
   --accent-hover: #155cba;
   --accent-subtle: #e8f0fe;
   --on-accent: #ffffff;
+  /* Text on solid danger/accent fills — white in both themes (fills stay
+   * saturated, not surface-tinted), so this is intentionally not overridden. */
+  --on-solid: #ffffff;
   --success: #188038;
   --success-subtle: #e6f4ea;
   --warning: #b26a00;

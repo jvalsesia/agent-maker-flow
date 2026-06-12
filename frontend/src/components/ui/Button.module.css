@@ -83,7 +83,7 @@
 
 .danger {
   background: var(--danger);
-  color: #ffffff;
+  color: var(--on-solid);
 }
 
 .danger:hover:not(:disabled) {
