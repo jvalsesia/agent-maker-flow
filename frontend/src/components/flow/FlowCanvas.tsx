@@ -1,6 +1,7 @@
 import { useCallback, type DragEvent } from "react";
 import {
   Background,
+  BackgroundVariant,
   Controls,
   ReactFlow,
   useReactFlow,
@@ -16,6 +17,7 @@ import * as ops from "../../lib/flowGraph";
 import type { FlowEdge, FlowNode } from "../../lib/flowGraph";
 import { AgentNode, FlowNodeContext, type FlowNodeContextValue } from "./AgentNode";
 import { AGENT_DRAG_MIME } from "./AgentPalette";
+import styles from "./FlowCanvas.module.css";
 
 /** Custom node registry — `type: "agent"` maps to {@link AgentNode}. */
 const nodeTypes: NodeTypes = { agent: AgentNode };
@@ -75,11 +77,7 @@ export function FlowCanvas({
   );
 
   return (
-    <div
-      style={{ width: "100%", height: "100%" }}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-    >
+    <div className={styles.canvas} onDragOver={handleDragOver} onDrop={handleDrop}>
       <FlowNodeContext.Provider value={context}>
         <ReactFlow
           nodes={nodes}
@@ -91,7 +89,7 @@ export function FlowCanvas({
           isValidConnection={isValidConnection}
           fitView
         >
-          <Background />
+          <Background variant={BackgroundVariant.Dots} gap={16} size={1.4} />
           <Controls />
         </ReactFlow>
       </FlowNodeContext.Provider>

@@ -1,4 +1,6 @@
 import type { FlowSummary } from "../../lib/flows";
+import { Button } from "../ui";
+import styles from "./SavedFlowsList.module.css";
 
 interface SavedFlowsListProps {
   flows: FlowSummary[];
@@ -18,7 +20,8 @@ function lastUpdated(value: string): string {
 /**
  * The caller's saved flows (F08): one row per flow with its name, a
  * last-updated indicator, and open / rename / delete actions. Action buttons
- * are labelled per flow so each is independently addressable.
+ * are labelled per flow so each is independently addressable; the active flow's
+ * row is marked `aria-current`.
  */
 export function SavedFlowsList({
   flows,
@@ -28,12 +31,12 @@ export function SavedFlowsList({
   onDelete,
 }: SavedFlowsListProps) {
   if (flows.length === 0) {
-    return <p>No saved flows yet. Save the canvas to create one.</p>;
+    return <p className={styles.empty}>No saved flows yet. Save the canvas to create one.</p>;
   }
 
   return (
-    <table aria-label="Saved flows">
-      <thead>
+    <table className={styles.table} aria-label="Saved flows">
+      <thead className={styles.srHead}>
         <tr>
           <th scope="col">Name</th>
           <th scope="col">Last updated</th>
@@ -42,29 +45,40 @@ export function SavedFlowsList({
       </thead>
       <tbody>
         {flows.map((flow) => (
-          <tr key={flow.id} aria-current={flow.id === activeFlowId ? "true" : undefined}>
-            <td>{flow.name}</td>
-            <td>
+          <tr
+            key={flow.id}
+            className={styles.row}
+            aria-current={flow.id === activeFlowId ? "true" : undefined}
+          >
+            <td className={styles.nameCell}>{flow.name}</td>
+            <td className={styles.timeCell}>
               <time dateTime={flow.updated_at}>{lastUpdated(flow.updated_at)}</time>
             </td>
-            <td>
-              <button type="button" aria-label={`Open ${flow.name}`} onClick={() => onOpen(flow)}>
+            <td className={styles.actionsCell}>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label={`Open ${flow.name}`}
+                onClick={() => onOpen(flow)}
+              >
                 Open
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 aria-label={`Rename ${flow.name}`}
                 onClick={() => onRename(flow)}
               >
                 Rename
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 aria-label={`Delete ${flow.name}`}
                 onClick={() => onDelete(flow)}
               >
                 Delete
-              </button>
+              </Button>
             </td>
           </tr>
         ))}

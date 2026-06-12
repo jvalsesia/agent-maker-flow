@@ -1,3 +1,5 @@
+import { Alert, Button, Modal } from "../ui";
+
 interface DeleteFlowDialogProps {
   flowName: string;
   onConfirm: () => void;
@@ -18,22 +20,39 @@ export function DeleteFlowDialog({
   error = null,
 }: DeleteFlowDialogProps) {
   return (
-    <div role="dialog" aria-modal="true" aria-label={`Delete flow ${flowName}`}>
-      <h3>Delete flow</h3>
-      <p>
+    <Modal
+      open
+      onClose={onCancel}
+      title="Delete flow"
+      size="sm"
+      busy={isDeleting}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onCancel} disabled={isDeleting}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            onClick={onConfirm}
+            disabled={isDeleting}
+            loading={isDeleting}
+            loadingLabel="Deleting…"
+          >
+            Delete
+          </Button>
+        </>
+      }
+    >
+      <p style={{ margin: 0 }}>
         Delete <strong>{flowName}</strong>? This cannot be undone.
       </p>
-
-      {error && <p role="alert">{error}</p>}
-
-      <div>
-        <button type="button" onClick={onConfirm} disabled={isDeleting}>
-          Delete
-        </button>
-        <button type="button" onClick={onCancel} disabled={isDeleting}>
-          Cancel
-        </button>
-      </div>
-    </div>
+      {error && (
+        <div style={{ marginTop: "var(--space-3)" }}>
+          <Alert variant="danger" role="alert">
+            {error}
+          </Alert>
+        </div>
+      )}
+    </Modal>
   );
 }

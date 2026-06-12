@@ -1,3 +1,6 @@
+import { Button } from "../ui";
+import styles from "./FlowToolbar.module.css";
+
 interface FlowToolbarProps {
   /** Whether the graph has at least one node. */
   hasNodes: boolean;
@@ -38,12 +41,23 @@ export function FlowToolbar({
   const disabled = message !== null || isRunning;
 
   return (
-    <div role="toolbar" aria-label="Flow actions">
-      <button type="button" disabled={disabled} onClick={onRun}>
-        {isRunning ? "Running…" : "Run Flow"}
-      </button>
+    <div className={styles.toolbar} role="toolbar" aria-label="Flow actions">
+      <Button
+        variant="primary"
+        disabled={disabled}
+        loading={isRunning}
+        loadingLabel="Running…"
+        onClick={onRun}
+        leadingIcon={
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        }
+      >
+        Run Flow
+      </Button>
       {message && (
-        <span role="status" style={{ marginLeft: 8 }}>
+        <span className={styles.reason} role="status">
           {message}
         </span>
       )}

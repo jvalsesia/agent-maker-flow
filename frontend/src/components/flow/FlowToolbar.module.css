@@ -1,0 +1,11 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.reason {
+  font-size: var(--text-caption-size);
+  line-height: var(--text-caption-line);
+  color: var(--warning);
+}

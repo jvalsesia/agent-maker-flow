@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useId, useState } from "react";
+
+import { Alert, Button, Input, Modal } from "../ui";
 
 /** Min/max trimmed length of a flow name — mirrors the backend rule (F08). */
 export const NAME_MAX = 80;
@@ -37,7 +39,9 @@ export function SaveFlowDialog({
   error = null,
 }: SaveFlowDialogProps) {
   const [name, setName] = useState(initialName);
+  const formId = useId();
   const validationError = validateName(name);
+  const count = [...name.trim()].length;
   const title = mode === "rename" ? "Rename flow" : "Save flow";
   const submitLabel = mode === "rename" ? "Rename" : "Save";
 
@@ -48,32 +52,47 @@ export function SaveFlowDialog({
   };
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={title}>
-      <h3>{title}</h3>
-      <form onSubmit={handleSubmit}>
-        <label>
-          Name
-          <input
-            type="text"
-            value={name}
-            autoFocus
-            onChange={(event) => setName(event.target.value)}
-            aria-invalid={validationError !== null}
-          />
-        </label>
-
-        {validationError && <p role="alert">{validationError}</p>}
-        {error && <p role="alert">{error}</p>}
-
-        <div>
-          <button type="submit" disabled={isSubmitting || validationError !== null}>
-            {submitLabel}
-          </button>
-          <button type="button" onClick={onCancel} disabled={isSubmitting}>
+    <Modal
+      open
+      onClose={onCancel}
+      title={title}
+      busy={isSubmitting}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onCancel} disabled={isSubmitting}>
             Cancel
-          </button>
-        </div>
+          </Button>
+          <Button
+            type="submit"
+            form={formId}
+            variant="primary"
+            disabled={isSubmitting || validationError !== null}
+            loading={isSubmitting}
+            loadingLabel={`${submitLabel}…`}
+          >
+            {submitLabel}
+          </Button>
+        </>
+      }
+    >
+      <form id={formId} onSubmit={handleSubmit}>
+        <Input
+          label="Name"
+          value={name}
+          autoFocus
+          onChange={(event) => setName(event.target.value)}
+          error={validationError}
+          counter={`${count} / ${NAME_MAX}`}
+          counterOver={count > NAME_MAX}
+        />
+        {error && (
+          <div style={{ marginTop: "var(--space-3)" }}>
+            <Alert variant="danger" role="alert">
+              {error}
+            </Alert>
+          </div>
+        )}
       </form>
-    </div>
+    </Modal>
   );
 }

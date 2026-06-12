@@ -30,6 +30,8 @@ import { SaveFlowDialog } from "../components/flow/SaveFlowDialog";
 import { DeleteFlowDialog } from "../components/flow/DeleteFlowDialog";
 import { MissingAgentsBanner } from "../components/flow/MissingAgentsBanner";
 import type { FlowNodeContextValue } from "../components/flow/AgentNode";
+import { Alert, Button, Card, Modal, useToast } from "../components/ui";
+import styles from "./FlowsPage.module.css";
 
 /**
  * Stable fingerprint of the persistence-relevant graph state (ignores React
@@ -77,12 +79,12 @@ export function FlowsPage() {
   const updateFlow = useUpdateFlow();
   const renameFlow = useRenameFlow();
   const deleteFlow = useDeleteFlow();
+  const { showToast } = useToast();
 
   const [activeFlowId, setActiveFlowId] = useState<string | null>(null);
   const [activeName, setActiveName] = useState<string | null>(null);
   const [savedFingerprint, setSavedFingerprint] = useState(() => fingerprint(ops.emptyGraph()));
 
-  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [saveDialog, setSaveDialog] = useState<SaveDialogState>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FlowSummary | null>(null);
@@ -170,13 +172,14 @@ export function FlowsPage() {
   const handleConnect = useCallback(
     (connection: Connection) => {
       const added = flow.connect(connection);
-      setConnectionError(
-        added
-          ? null
-          : "Connection rejected: a flow must stay acyclic — no self-loops, cycles, or duplicate edges.",
-      );
+      if (!added) {
+        showToast(
+          "Connection rejected: flows must stay acyclic — no self-loops, cycles, or duplicate edges.",
+          "error",
+        );
+      }
     },
-    [flow],
+    [flow, showToast],
   );
 
   /** Replace the canvas with a saved flow, fetching its full graph on demand. */
@@ -231,6 +234,7 @@ export function FlowsPage() {
         });
         setSavedFingerprint(fingerprint(saved.graph));
         setSaveError(null);
+        showToast("Flow saved", "success");
       } catch (err) {
         // The save failed; the local canvas state is preserved untouched.
         setSaveError(err instanceof ApiClientError ? err.message : "Failed to save the flow.");
@@ -239,7 +243,7 @@ export function FlowsPage() {
     }
     setDialogError(null);
     setSaveDialog({ mode: "save" });
-  }, [activeFlowId, activeName, updateFlow, flow.graph]);
+  }, [activeFlowId, activeName, updateFlow, flow.graph, showToast]);
 
   const handleSaveAs = useCallback(() => {
     setDialogError(null);
@@ -253,11 +257,13 @@ export function FlowsPage() {
           const flowId = saveDialog.flow.id;
           await renameFlow.mutateAsync({ id: flowId, name });
           if (flowId === activeFlowId) setActiveName(name);
+          showToast("Flow renamed", "success");
         } else {
           const saved = await createFlow.mutateAsync({ name, graph: flow.graph });
           setActiveFlowId(saved.id);
           setActiveName(saved.name);
           setSavedFingerprint(fingerprint(saved.graph));
+          showToast("Flow saved", "success");
         }
         setSaveDialog(null);
         setDialogError(null);
@@ -268,7 +274,7 @@ export function FlowsPage() {
         );
       }
     },
-    [saveDialog, renameFlow, createFlow, flow.graph, activeFlowId],
+    [saveDialog, renameFlow, createFlow, flow.graph, activeFlowId, showToast],
   );
 
   const handleDeleteConfirm = useCallback(async () => {
@@ -281,12 +287,13 @@ export function FlowsPage() {
       }
       setDeleteTarget(null);
       setDeleteError(null);
+      showToast("Flow deleted", "success");
     } catch (err) {
       setDeleteError(
         err instanceof ApiClientError ? err.message : "Could not delete the flow.",
       );
     }
-  }, [deleteTarget, deleteFlow, activeFlowId]);
+  }, [deleteTarget, deleteFlow, activeFlowId, showToast]);
 
   const context = useMemo<FlowNodeContextValue>(
     () => ({
@@ -310,87 +317,107 @@ export function FlowsPage() {
   );
 
   return (
-    <section aria-label="Flows workspace">
-      <h2>Flows</h2>
-
-      <div role="toolbar" aria-label="Flow file actions" style={{ display: "flex", gap: 8 }}>
-        <button type="button" onClick={handleNew}>
-          New
-        </button>
-        <button type="button" onClick={() => void handleSave()}>
-          Save
-        </button>
-        <button type="button" onClick={handleSaveAs}>
-          Save As
-        </button>
-        <span role="status">
-          {activeName ? `${activeName}${isDirty ? " — unsaved changes" : ""}` : "Unsaved flow"}
-        </span>
+    <section className={styles.page} aria-label="Flows workspace">
+      <div className={styles.toolbar} role="toolbar" aria-label="Flow file actions">
+        <div className={styles.toolbarLeft}>
+          <h2 className={styles.heading}>Flows</h2>
+          <span className={styles.divider} aria-hidden="true" />
+          <span className={styles.flowName}>{activeName ?? "Untitled flow"}</span>
+          {isDirty && (
+            <span className={styles.dirty} role="status">
+              <span className={styles.dirtyDot} aria-hidden="true" />
+              Unsaved
+            </span>
+          )}
+        </div>
+        <div className={styles.toolbarRight}>
+          <span className={styles.status}>
+            {activeName ? (isDirty ? "Unsaved changes" : "Saved") : "Not saved yet"}
+          </span>
+          <Button variant="secondary" size="sm" onClick={handleNew}>
+            New
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => void handleSave()}>
+            Save
+          </Button>
+          <Button variant="secondary" size="sm" onClick={handleSaveAs}>
+            Save as
+          </Button>
+        </div>
       </div>
 
-      {saveError && <p role="alert">{saveError}</p>}
-      {connectionError && <p role="alert">{connectionError}</p>}
-      <MissingAgentsBanner missingAgentIds={missingIds} />
+      {(saveError || missingIds.length > 0) && (
+        <div className={styles.banners}>
+          {saveError && (
+            <Alert variant="danger" role="alert">
+              {saveError}
+            </Alert>
+          )}
+          <MissingAgentsBanner missingAgentIds={missingIds} />
+        </div>
+      )}
 
-      <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
-        <aside aria-label="Saved flows" style={{ width: 260 }}>
-          <SavedFlowsList
-            flows={flows ?? []}
-            activeFlowId={activeFlowId}
-            onOpen={handleOpen}
-            onRename={(f) => {
-              setDialogError(null);
-              setSaveDialog({ mode: "rename", flow: f });
-            }}
-            onDelete={(f) => {
-              setDeleteError(null);
-              setDeleteTarget(f);
-            }}
-          />
+      <div className={styles.workspace}>
+        <aside className={styles.left} aria-label="Saved flows">
+          <Card title="Agents palette" className={styles.paletteCard} bodyClassName={styles.scrollBody}>
+            <AgentPalette />
+          </Card>
+          <Card title="Saved flows" className={styles.flowsCard} bodyClassName={styles.scrollBody}>
+            <SavedFlowsList
+              flows={flows ?? []}
+              activeFlowId={activeFlowId}
+              onOpen={handleOpen}
+              onRename={(f) => {
+                setDialogError(null);
+                setSaveDialog({ mode: "rename", flow: f });
+              }}
+              onDelete={(f) => {
+                setDeleteError(null);
+                setDeleteTarget(f);
+              }}
+            />
+          </Card>
         </aside>
 
         <ReactFlowProvider>
-          <div style={{ flex: 1 }}>
-            <FlowToolbar
-              hasNodes={flow.nodes.length > 0}
-              hasRoot={flow.rootNodeId !== null}
-              missingAgentCount={missingIds.length}
-              isRunning={isRunning}
-              onRun={() => void handleRun(prompt)}
-            />
-
-            <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
-              <AgentPalette />
-              <div style={{ flex: 1, height: 600, border: "1px solid #ddd", borderRadius: 6 }}>
-                <FlowCanvas
-                  nodes={flow.nodes}
-                  edges={flow.edges}
-                  rootNodeId={flow.rootNodeId}
-                  onNodesChange={flow.onNodesChange}
-                  onEdgesChange={flow.onEdgesChange}
-                  onConnect={handleConnect}
-                  onDropAgent={flow.addAgentNode}
-                  context={context}
+          <div className={styles.center}>
+            <div className={styles.canvasWrap}>
+              <div className={styles.runOverlay}>
+                <FlowToolbar
+                  hasNodes={flow.nodes.length > 0}
+                  hasRoot={flow.rootNodeId !== null}
+                  missingAgentCount={missingIds.length}
+                  isRunning={isRunning}
+                  onRun={() => void handleRun(prompt)}
                 />
               </div>
+              <FlowCanvas
+                nodes={flow.nodes}
+                edges={flow.edges}
+                rootNodeId={flow.rootNodeId}
+                onNodesChange={flow.onNodesChange}
+                onEdgesChange={flow.onEdgesChange}
+                onConnect={handleConnect}
+                onDropAgent={flow.addAgentNode}
+                context={context}
+              />
             </div>
           </div>
         </ReactFlowProvider>
 
-        <aside
-          aria-label="Conversation monitor panel"
-          style={{ width: 340, borderLeft: "1px solid #ddd", paddingLeft: 12 }}
-        >
-          <ConversationMonitor
-            turns={turns}
-            nodes={runNodes}
-            connection={connection}
-            isRunning={isRunning}
-            prompt={prompt}
-            onPromptChange={setPrompt}
-            onSubmit={(submitted) => void handleRun(submitted)}
-            runDisabledReason={runDisabledReason}
-          />
+        <aside className={styles.right} aria-label="Conversation monitor panel">
+          <Card className={styles.monitorCard}>
+            <ConversationMonitor
+              turns={turns}
+              nodes={runNodes}
+              connection={connection}
+              isRunning={isRunning}
+              prompt={prompt}
+              onPromptChange={setPrompt}
+              onSubmit={(submitted) => void handleRun(submitted)}
+              runDisabledReason={runDisabledReason}
+            />
+          </Card>
         </aside>
       </div>
 
@@ -422,24 +449,30 @@ export function FlowsPage() {
       )}
 
       {pendingAction && (
-        <div role="dialog" aria-modal="true" aria-label="Unsaved changes">
-          <h3>Discard unsaved changes?</h3>
-          <p>The canvas has unsaved changes that will be lost. Continue?</p>
-          <div>
-            <button
-              type="button"
-              onClick={() => {
-                pendingAction.run();
-                setPendingAction(null);
-              }}
-            >
-              Discard and continue
-            </button>
-            <button type="button" onClick={() => setPendingAction(null)}>
-              Cancel
-            </button>
-          </div>
-        </div>
+        <Modal
+          open
+          onClose={() => setPendingAction(null)}
+          title="Discard unsaved changes?"
+          size="sm"
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setPendingAction(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  pendingAction.run();
+                  setPendingAction(null);
+                }}
+              >
+                Discard and continue
+              </Button>
+            </>
+          }
+        >
+          <p style={{ margin: 0 }}>The canvas has unsaved changes that will be lost. Continue?</p>
+        </Modal>
       )}
     </section>
   );

@@ -1,7 +1,14 @@
+import { useMemo, useState } from "react";
+
 import { useAgents } from "../../lib/agents";
+import { Alert, Badge, Input, SkeletonRows } from "../ui";
+import styles from "./AgentPalette.module.css";
 
 /** DataTransfer MIME type carrying the dragged agent's id onto the canvas. */
 export const AGENT_DRAG_MIME = "application/x-agent-id";
+
+/** Above this many agents, show a search filter to keep the palette scannable. */
+const SEARCH_THRESHOLD = 8;
 
 /**
  * The agent palette (F07): the caller's F04 registry agents rendered as
@@ -11,43 +18,69 @@ export const AGENT_DRAG_MIME = "application/x-agent-id";
  */
 export function AgentPalette() {
   const { data: agents, isLoading, isError } = useAgents();
+  const [query, setQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    const all = agents ?? [];
+    const q = query.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter(
+      (a) => a.name.toLowerCase().includes(q) || a.model.toLowerCase().includes(q),
+    );
+  }, [agents, query]);
 
   return (
-    <aside aria-label="Agent palette" style={{ minWidth: 200 }}>
-      <h3>Agents</h3>
+    <div className={styles.palette} aria-label="Agent palette">
+      <div className={styles.header}>
+        <span className={styles.title}>Agents</span>
+        {agents && agents.length > 0 && <Badge variant="neutral">{agents.length}</Badge>}
+      </div>
 
-      {isLoading && <p>Loading agents…</p>}
-      {isError && <p role="alert">Could not load agents. Please retry.</p>}
-      {agents && agents.length === 0 && (
-        <p>No agents yet. Create one on the Agents dashboard.</p>
+      {agents && agents.length > SEARCH_THRESHOLD && (
+        <Input
+          type="search"
+          aria-label="Filter agents"
+          placeholder="Filter agents…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
       )}
 
-      {agents && agents.length > 0 && (
-        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-          {agents.map((agent) => (
+      {isLoading && <SkeletonRows count={4} />}
+      {isError && (
+        <Alert variant="danger" role="alert">
+          Could not load agents. Please retry.
+        </Alert>
+      )}
+      {agents && agents.length === 0 && (
+        <p className={styles.empty}>No agents yet. Create one on the Agents dashboard.</p>
+      )}
+
+      {filtered.length > 0 && (
+        <ul className={styles.list}>
+          {filtered.map((agent) => (
             <li
               key={agent.id}
+              className={styles.item}
               draggable
               data-agent-id={agent.id}
+              title={`Drag ${agent.name} onto the canvas`}
               onDragStart={(event) => {
                 event.dataTransfer.setData(AGENT_DRAG_MIME, agent.id);
                 event.dataTransfer.effectAllowed = "move";
               }}
-              style={{
-                border: "1px solid #ccc",
-                borderRadius: 4,
-                padding: "6px 8px",
-                marginBottom: 6,
-                cursor: "grab",
-              }}
             >
-              <strong>{agent.name}</strong>
-              <br />
-              <small>{agent.model}</small>
+              <div className={styles.itemHead}>
+                <span className={styles.name}>{agent.name}</span>
+                <Badge variant="neutral" dot>
+                  {agent.provider}
+                </Badge>
+              </div>
+              <span className={styles.model}>{agent.model}</span>
             </li>
           ))}
         </ul>
       )}
-    </aside>
+    </div>
   );
 }
