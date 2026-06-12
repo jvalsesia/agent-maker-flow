@@ -1,4 +1,5 @@
 import type { Model } from "../lib/models";
+import { Alert, Select } from "./ui";
 
 interface EmbeddingModelSelectProps {
   /** Catalog models for the chosen provider; only embedding-mode ones show. */
@@ -34,11 +35,9 @@ export function EmbeddingModelSelect({
   const showWarning = hasValue && staleModels.length > 0;
 
   return (
-    <div>
-      <label htmlFor="embedding-model">Global embedding model</label>
-      <br />
-      <select
-        id="embedding-model"
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+      <Select
+        label="Global embedding model"
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
@@ -50,14 +49,13 @@ export function EmbeddingModelSelect({
             {m.label}
           </option>
         ))}
-      </select>
+      </Select>
 
       {showWarning && (
-        <p role="alert">
-          Some existing records were embedded with a different model (
-          {staleModels.join(", ")}). They are not re-embedded automatically — edit
-          a record to re-embed it with the current model.
-        </p>
+        <Alert variant="warning" role="alert" title="Existing records use a different model">
+          Some records were embedded with {staleModels.join(", ")}. They are not re-embedded
+          automatically — edit a record to re-embed it with the current model.
+        </Alert>
       )}
     </div>
   );

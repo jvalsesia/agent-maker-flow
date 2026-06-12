@@ -9,6 +9,8 @@ import {
 } from "../lib/embeddingSettings";
 import { useDeleteMemoryRecord, useMemoryRecords, type MemoryRecord } from "../lib/memory";
 import { useModels, useProviders } from "../lib/models";
+import { Alert, Card, Select, SkeletonRows } from "../components/ui";
+import styles from "./SettingsPage.module.css";
 
 /**
  * Settings panel (F05): pick the global embedding model (from the F03 catalog,
@@ -35,59 +37,75 @@ export function SettingsPage() {
   }, [providers.data, provider]);
 
   return (
-    <section aria-label="Settings">
-      <h2>Settings</h2>
+    <section className={styles.page} aria-label="Settings">
+      <h2 className={styles.title}>Settings</h2>
 
-      <section aria-label="Embedding model">
-        <h3>Embedding</h3>
-        <label htmlFor="embedding-provider">Provider</label>
-        <br />
-        <select
-          id="embedding-provider"
-          value={provider}
-          onChange={(e) => setProvider(e.target.value)}
-        >
-          <option value="">Select a provider…</option>
-          {(providers.data ?? []).map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.id}
-            </option>
-          ))}
-        </select>
+      <Card title="Embedding" as="h3">
+        <div className={styles.section} aria-label="Embedding model">
+          <p className={styles.subhead}>
+            The global embedding model used to store and search memory records.
+          </p>
+          <Select
+            label="Provider"
+            id="embedding-provider"
+            value={provider}
+            onChange={(e) => setProvider(e.target.value)}
+          >
+            <option value="">Select a provider…</option>
+            {(providers.data ?? []).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.id}
+              </option>
+            ))}
+          </Select>
 
-        <EmbeddingModelSelect
-          models={models.data ?? []}
-          value={setting.data?.embedding_model ?? null}
-          onChange={(model) => setEmbedding.mutate(model)}
-          modelsInUse={memory.data?.models_in_use ?? []}
-          disabled={setEmbedding.isPending}
-        />
-        {setEmbedding.isError && <p role="alert">Could not update the embedding model.</p>}
-      </section>
-
-      <section aria-label="Memory records">
-        <h3>Memory</h3>
-
-        {editing ? (
-          <MemoryRecordForm
-            record={editing}
-            onSaved={() => setEditing(null)}
-            onCancel={() => setEditing(null)}
+          <EmbeddingModelSelect
+            models={models.data ?? []}
+            value={setting.data?.embedding_model ?? null}
+            onChange={(model) => setEmbedding.mutate(model)}
+            modelsInUse={memory.data?.models_in_use ?? []}
+            disabled={setEmbedding.isPending}
           />
-        ) : (
-          <MemoryRecordForm />
-        )}
+          {setEmbedding.isError && (
+            <Alert variant="danger" role="alert">
+              Could not update the embedding model.
+            </Alert>
+          )}
+        </div>
+      </Card>
 
-        {memory.isLoading && <p>Loading records…</p>}
-        {memory.isError && <p role="alert">Could not load memory records. Please retry.</p>}
-        {memory.data && (
-          <MemoryRecordList
-            records={memory.data.records}
-            onEdit={(record) => setEditing(record)}
-            onDelete={(record) => deleteRecord.mutate(record.id)}
-          />
-        )}
-      </section>
+      <Card title="Memory" as="h3">
+        <div className={styles.section} aria-label="Memory records">
+          <div className={styles.formBlock}>
+            {editing ? (
+              <MemoryRecordForm
+                record={editing}
+                onSaved={() => setEditing(null)}
+                onCancel={() => setEditing(null)}
+              />
+            ) : (
+              <MemoryRecordForm />
+            )}
+          </div>
+
+          <div className={styles.records}>
+            <span className={styles.recordsLabel}>Records</span>
+            {memory.isLoading && <SkeletonRows count={3} />}
+            {memory.isError && (
+              <Alert variant="danger" role="alert">
+                Could not load memory records. Please retry.
+              </Alert>
+            )}
+            {memory.data && (
+              <MemoryRecordList
+                records={memory.data.records}
+                onEdit={(record) => setEditing(record)}
+                onDelete={(record) => deleteRecord.mutate(record.id)}
+              />
+            )}
+          </div>
+        </div>
+      </Card>
     </section>
   );
 }

@@ -1,0 +1,82 @@
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm-size);
+}
+
+.head th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--text-caption-size);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.numHead {
+  text-align: right;
+}
+
+.row {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.row:hover {
+  background: var(--accent-subtle);
+}
+
+.row:hover .actions {
+  opacity: 1;
+}
+
+.cell {
+  padding: var(--space-2) var(--space-3);
+  vertical-align: middle;
+}
+
+.name {
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.model {
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.actionsCell {
+  padding: var(--space-1) var(--space-3);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Actions appear on hover/focus but stay keyboard-reachable always. */
+.actions {
+  display: inline-flex;
+  gap: var(--space-1);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.actions:focus-within {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .actions {
+    opacity: 1;
+  }
+}
