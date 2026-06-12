@@ -1,0 +1,208 @@
+/* Design tokens & global base styles (F11 — Design System & UI Polish).
+ *
+ * Single token layer per docs/ui-ux-design-spec.md §2. Light values live on
+ * :root; dark overrides on [data-theme="dark"]. Ship dark as default — the
+ * theme module sets data-theme before first paint. No component should hardcode
+ * a hex or px-spacing value; reference these custom properties instead. */
+
+:root {
+  /* 2.1 Color — semantic tokens (light) */
+  --bg-base: #ffffff;
+  --bg-surface: #f7f8fa;
+  --bg-surface-raised: #ffffff;
+  --bg-inset: #eef0f3;
+  --border-subtle: #e3e6ea;
+  --border-strong: #c7ccd3;
+  --text-primary: #1a1f26;
+  --text-secondary: #5a6472;
+  --text-muted: #8a93a0;
+  --accent: #1a73e8;
+  --accent-hover: #155cba;
+  --accent-subtle: #e8f0fe;
+  --on-accent: #ffffff;
+  /* Text on solid danger/accent fills — white in both themes (fills stay
+   * saturated, not surface-tinted), so this is intentionally not overridden. */
+  --on-solid: #ffffff;
+  --success: #188038;
+  --success-subtle: #e6f4ea;
+  --warning: #b26a00;
+  --warning-subtle: #fef3e2;
+  --danger: #b00020;
+  --danger-subtle: #fce8ec;
+  --running: #1a73e8;
+  --focus-ring: #1a73e8;
+  --scrim: rgba(8, 11, 16, 0.55);
+
+  /* 2.2 Typography */
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Menlo, monospace;
+
+  --text-display-size: 28px;
+  --text-display-line: 34px;
+  --text-h1-size: 22px;
+  --text-h1-line: 28px;
+  --text-h2-size: 17px;
+  --text-h2-line: 24px;
+  --text-h3-size: 14px;
+  --text-h3-line: 20px;
+  --text-body-size: 14px;
+  --text-body-line: 21px;
+  --text-sm-size: 13px;
+  --text-sm-line: 18px;
+  --text-caption-size: 12px;
+  --text-caption-line: 16px;
+  --text-mono-size: 13px;
+  --text-mono-line: 20px;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* 2.3 Spacing — 4px base scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* 2.4 Radius, elevation, motion */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(16, 22, 30, 0.06), 0 1px 1px rgba(16, 22, 30, 0.04);
+  --shadow-md: 0 4px 12px rgba(16, 22, 30, 0.1);
+  --shadow-lg: 0 12px 32px rgba(16, 22, 30, 0.18);
+
+  --ease: cubic-bezier(0.2, 0, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --motion-pulse: 1.4s;
+
+  /* Fixed chrome metrics referenced by layout (shell topbar, etc.) */
+  --topbar-height: 56px;
+}
+
+[data-theme="dark"] {
+  --bg-base: #0e1116;
+  --bg-surface: #161b22;
+  --bg-surface-raised: #1c2330;
+  --bg-inset: #0a0d12;
+  --border-subtle: #2a313c;
+  --border-strong: #3a434f;
+  --text-primary: #e6eaf0;
+  --text-secondary: #9aa4b2;
+  --text-muted: #6b7480;
+  --accent: #4d9cff;
+  --accent-hover: #6bb0ff;
+  --accent-subtle: #16314f;
+  --on-accent: #0e1116;
+  --success: #3fb950;
+  --success-subtle: #10301c;
+  --warning: #d29922;
+  --warning-subtle: #3a2d10;
+  --danger: #f85149;
+  --danger-subtle: #3d1418;
+  --running: #4d9cff;
+  --focus-ring: #4d9cff;
+  --scrim: rgba(2, 4, 8, 0.66);
+}
+
+/* ----- Base reset & document defaults ----- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  font-weight: var(--weight-regular);
+  color: var(--text-primary);
+  background: var(--bg-base);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+figure {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--accent);
+}
+
+code,
+pre {
+  font-family: var(--font-mono);
+}
+
+/* ----- Focus visibility (spec §7) ----- */
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Mouse users don't get an outline; only keyboard focus. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ----- Reduced motion (spec §2.4, §6) ----- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Skip link — first focusable element in the shell (spec §4, §7). */
+.skip-link {
+  position: absolute;
+  left: var(--space-3);
+  top: -48px;
+  z-index: 1000;
+  padding: var(--space-2) var(--space-3);
+  background: var(--accent);
+  color: var(--on-accent);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: top var(--dur-fast) var(--ease);
+}
+
+.skip-link:focus {
+  top: var(--space-3);
+}

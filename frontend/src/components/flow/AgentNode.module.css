@@ -1,0 +1,159 @@
+.node {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 184px;
+  padding: var(--space-3);
+  background: var(--bg-surface);
+  border: 1px solid var(--state-border, var(--border-strong));
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-primary);
+  transition:
+    border-color var(--dur-base) var(--ease),
+    box-shadow var(--dur-base) var(--ease);
+}
+
+.running {
+  --state-border: var(--running);
+  box-shadow: 0 0 0 1px var(--running), var(--shadow-sm);
+}
+
+.complete {
+  --state-border: var(--success);
+}
+
+.error,
+.missing {
+  --state-border: var(--danger);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.name {
+  font-size: var(--text-h3-size);
+  line-height: var(--text-h3-line);
+  font-weight: var(--weight-semibold);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm-size);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.missingText {
+  color: var(--danger);
+  font-size: var(--text-sm-size);
+  font-weight: var(--weight-medium);
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-caption-size);
+  color: var(--text-secondary);
+}
+
+/* Thin indeterminate bar under a running node (spec §5.2). */
+.runningBar {
+  height: 2px;
+  border-radius: var(--radius-full);
+  background: var(--accent-subtle);
+  overflow: hidden;
+  position: relative;
+}
+
+.runningBar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  border-radius: var(--radius-full);
+  background: var(--running);
+  animation: node-indeterminate 1.1s var(--ease) infinite;
+}
+
+@keyframes node-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .runningBar::after {
+    animation: none;
+    width: 100%;
+  }
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--space-2);
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+.action:hover {
+  background: var(--bg-inset);
+  color: var(--text-primary);
+}
+
+.action svg {
+  width: 15px;
+  height: 15px;
+}
+
+.setRoot {
+  width: auto;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  font-size: var(--text-caption-size);
+  font-weight: var(--weight-medium);
+  margin-right: auto;
+}
+
+.setRootActive {
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+.handle {
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  border: 2px solid var(--bg-surface);
+}

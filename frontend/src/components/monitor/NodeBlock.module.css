@@ -1,0 +1,86 @@
+.block {
+  border: 1px solid var(--state-border, var(--border-subtle));
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-raised);
+  padding: var(--space-3);
+}
+
+.block + .block {
+  margin-top: var(--space-2);
+}
+
+.running {
+  --state-border: var(--running);
+}
+
+.complete {
+  --state-border: var(--success);
+}
+
+.error {
+  --state-border: var(--danger);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.name {
+  font-size: var(--text-h3-size);
+  font-weight: var(--weight-semibold);
+}
+
+.model {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm-size);
+  color: var(--text-secondary);
+}
+
+.streaming {
+  margin-left: auto;
+  font-size: var(--text-caption-size);
+  color: var(--running);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.body {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2);
+  background: var(--bg-inset);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-mono-size);
+  line-height: var(--text-mono-line);
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-primary);
+}
+
+.bodyError {
+  color: var(--danger);
+  background: var(--danger-subtle);
+}
+
+/* Blinking caret appended while output streams in (spec §6). */
+.caret::after {
+  content: "▌";
+  margin-left: 1px;
+  color: var(--running);
+  animation: caret-blink 1s steps(1) infinite;
+}
+
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caret::after {
+    animation: none;
+  }
+}

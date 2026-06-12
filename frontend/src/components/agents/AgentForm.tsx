@@ -1,13 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 import { ApiClientError } from "../../lib/apiClient";
 import type { Agent, AgentInput } from "../../lib/agents";
 import {
+  PREAMBLE_MAX,
+  SYSTEM_PROMPT_MAX,
   validateAgentForm,
   type AgentFieldErrors,
   type AgentFormValues,
 } from "../../lib/agentValidation";
 import { useModels, useProviders } from "../../lib/models";
+import { Alert, Button, Input, Modal, Select, Textarea } from "../ui";
+import styles from "./AgentForm.module.css";
 
 export type AgentFormMode = "create" | "edit" | "duplicate";
 
@@ -57,17 +61,18 @@ function mapApiError(error: ApiClientError, name: string): AgentFieldErrors {
 }
 
 /**
- * Controlled create/edit/duplicate agent form. The provider and model
- * dropdowns come from the F03 catalog; the model select stays disabled until a
- * provider is chosen and is cleared if the chosen provider no longer offers the
- * selected model. Fields are validated inline against the shared rules; server
- * error codes are mapped back onto the relevant fields on submit.
+ * Controlled create/edit/duplicate agent form (now a modal). The provider and
+ * model dropdowns come from the F03 catalog; the model select stays disabled
+ * until a provider is chosen and is cleared if the chosen provider no longer
+ * offers the selected model. Fields are validated inline against the shared
+ * rules; server error codes are mapped back onto the relevant fields on submit.
  */
 export function AgentForm({ mode, initial, onSubmit, onCancel }: AgentFormProps) {
   const [values, setValues] = useState<AgentFormValues>(() => initialValues(mode, initial));
   const [errors, setErrors] = useState<AgentFieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const formId = useId();
 
   const providersQuery = useProviders();
   const modelsQuery = useModels(values.provider.length > 0 ? values.provider : null);
@@ -134,123 +139,125 @@ export function AgentForm({ mode, initial, onSubmit, onCancel }: AgentFormProps)
 
   const title =
     mode === "edit" ? "Edit agent" : mode === "duplicate" ? "Duplicate agent" : "New agent";
+  const submitLabel = mode === "edit" ? "Save changes" : "Create agent";
+  const preambleLen = [...values.preamble].length;
+  const systemLen = [...values.system_prompt].length;
 
   return (
-    <form onSubmit={handleSubmit} aria-label={title}>
-      <h3>{title}</h3>
+    <Modal
+      open
+      onClose={onCancel}
+      title={title}
+      size="lg"
+      busy={submitting}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onCancel} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form={formId}
+            variant="primary"
+            loading={submitting}
+            loadingLabel="Saving…"
+          >
+            {submitLabel}
+          </Button>
+        </>
+      }
+    >
+      {mode === "duplicate" && initial && (
+        <p className={styles.caption}>Duplicating from {initial.name}</p>
+      )}
 
-      <p>
-        <label htmlFor="agent-name">Name</label>
-        <br />
-        <input
-          id="agent-name"
-          type="text"
-          value={values.name}
-          onChange={(e) => update("name", e.target.value)}
-          aria-invalid={errors.name ? true : undefined}
-        />
-        {errors.name && <span role="alert">{errors.name}</span>}
-      </p>
+      <form id={formId} onSubmit={handleSubmit} aria-label={title}>
+        <div className={styles.grid}>
+          <div className={styles.column}>
+            <Input
+              label="Name"
+              value={values.name}
+              onChange={(e) => update("name", e.target.value)}
+              error={errors.name}
+            />
+            <Select
+              label="Provider"
+              value={values.provider}
+              onChange={(e) => update("provider", e.target.value)}
+              error={errors.provider}
+            >
+              <option value="">Select a provider…</option>
+              {providers.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.id}
+                </option>
+              ))}
+            </Select>
+            <Select
+              label="Model"
+              value={values.model}
+              onChange={(e) => update("model", e.target.value)}
+              disabled={values.provider.length === 0}
+              error={errors.model}
+              hint={values.provider.length === 0 ? "Select a provider first" : undefined}
+            >
+              <option value="">Select a model…</option>
+              {models.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
+                </option>
+              ))}
+            </Select>
+            <div className={styles.row}>
+              <Input
+                label="Recent messages (recent-N)"
+                type="number"
+                value={Number.isNaN(values.recent_n) ? "" : values.recent_n}
+                onChange={(e) => update("recent_n", e.target.valueAsNumber)}
+                error={errors.recent_n}
+              />
+              <Input
+                label="Retrieval breadth (top-K)"
+                type="number"
+                value={Number.isNaN(values.top_k) ? "" : values.top_k}
+                onChange={(e) => update("top_k", e.target.valueAsNumber)}
+                error={errors.top_k}
+              />
+            </div>
+          </div>
 
-      <p>
-        <label htmlFor="agent-preamble">Preamble (optional)</label>
-        <br />
-        <textarea
-          id="agent-preamble"
-          value={values.preamble}
-          onChange={(e) => update("preamble", e.target.value)}
-          aria-invalid={errors.preamble ? true : undefined}
-        />
-        {errors.preamble && <span role="alert">{errors.preamble}</span>}
-      </p>
+          <div className={styles.column}>
+            <Textarea
+              label="Preamble (optional)"
+              mono
+              rows={4}
+              value={values.preamble}
+              onChange={(e) => update("preamble", e.target.value)}
+              error={errors.preamble}
+              counter={`${preambleLen} / ${PREAMBLE_MAX}`}
+              counterOver={preambleLen > PREAMBLE_MAX}
+            />
+            <Textarea
+              label="System prompt"
+              mono
+              rows={8}
+              value={values.system_prompt}
+              onChange={(e) => update("system_prompt", e.target.value)}
+              error={errors.system_prompt}
+              counter={`${systemLen} / ${SYSTEM_PROMPT_MAX}`}
+              counterOver={systemLen > SYSTEM_PROMPT_MAX}
+            />
+          </div>
+        </div>
 
-      <p>
-        <label htmlFor="agent-system-prompt">System prompt</label>
-        <br />
-        <textarea
-          id="agent-system-prompt"
-          value={values.system_prompt}
-          onChange={(e) => update("system_prompt", e.target.value)}
-          aria-invalid={errors.system_prompt ? true : undefined}
-        />
-        {errors.system_prompt && <span role="alert">{errors.system_prompt}</span>}
-      </p>
-
-      <p>
-        <label htmlFor="agent-provider">Provider</label>
-        <br />
-        <select
-          id="agent-provider"
-          value={values.provider}
-          onChange={(e) => update("provider", e.target.value)}
-          aria-invalid={errors.provider ? true : undefined}
-        >
-          <option value="">Select a provider…</option>
-          {providers.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.id}
-            </option>
-          ))}
-        </select>
-        {errors.provider && <span role="alert">{errors.provider}</span>}
-      </p>
-
-      <p>
-        <label htmlFor="agent-model">Model</label>
-        <br />
-        <select
-          id="agent-model"
-          value={values.model}
-          onChange={(e) => update("model", e.target.value)}
-          disabled={values.provider.length === 0}
-          aria-invalid={errors.model ? true : undefined}
-        >
-          <option value="">Select a model…</option>
-          {models.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.label}
-            </option>
-          ))}
-        </select>
-        {errors.model && <span role="alert">{errors.model}</span>}
-      </p>
-
-      <p>
-        <label htmlFor="agent-recent-n">Recent messages (recent-N)</label>
-        <br />
-        <input
-          id="agent-recent-n"
-          type="number"
-          value={Number.isNaN(values.recent_n) ? "" : values.recent_n}
-          onChange={(e) => update("recent_n", e.target.valueAsNumber)}
-          aria-invalid={errors.recent_n ? true : undefined}
-        />
-        {errors.recent_n && <span role="alert">{errors.recent_n}</span>}
-      </p>
-
-      <p>
-        <label htmlFor="agent-top-k">Retrieval breadth (top-K)</label>
-        <br />
-        <input
-          id="agent-top-k"
-          type="number"
-          value={Number.isNaN(values.top_k) ? "" : values.top_k}
-          onChange={(e) => update("top_k", e.target.valueAsNumber)}
-          aria-invalid={errors.top_k ? true : undefined}
-        />
-        {errors.top_k && <span role="alert">{errors.top_k}</span>}
-      </p>
-
-      {formError && <p role="alert">{formError}</p>}
-
-      <div>
-        <button type="submit" disabled={submitting}>
-          {mode === "edit" ? "Save changes" : "Create agent"}
-        </button>
-        <button type="button" onClick={onCancel} disabled={submitting}>
-          Cancel
-        </button>
-      </div>
-    </form>
+        {formError && (
+          <div className={styles.formError}>
+            <Alert variant="danger" role="alert">
+              {formError}
+            </Alert>
+          </div>
+        )}
+      </form>
+    </Modal>
   );
 }

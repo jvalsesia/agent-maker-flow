@@ -1,0 +1,156 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--topbar-height));
+  min-height: 0;
+}
+
+/* Top toolbar row: flow name + dirty indicator (left); file actions (right). */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+}
+
+.toolbarLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.heading {
+  font-size: var(--text-h1-size);
+  line-height: var(--text-h1-line);
+  font-weight: var(--weight-bold);
+  margin: 0;
+}
+
+.flowName {
+  font-size: var(--text-h3-size);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  max-width: 28ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-subtle);
+}
+
+.dirty {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-caption-size);
+  color: var(--warning);
+}
+
+.dirtyDot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: var(--warning);
+}
+
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.status {
+  font-size: var(--text-sm-size);
+  color: var(--text-secondary);
+  margin-right: var(--space-2);
+}
+
+.banners {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5) 0;
+}
+
+/* Three-pane workspace. */
+.workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+}
+
+.left {
+  width: 260px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+}
+
+.paletteCard {
+  flex: 1;
+  min-height: 0;
+}
+
+.flowsCard {
+  flex: none;
+  max-height: 38%;
+}
+
+.center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.canvasWrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.runOverlay {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: 5;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.right {
+  width: 360px;
+  flex: none;
+  min-height: 0;
+}
+
+.scrollBody {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.monitorCard {
+  height: 100%;
+}
+
+@media (max-width: 1279px) {
+  .right {
+    width: 300px;
+  }
+}

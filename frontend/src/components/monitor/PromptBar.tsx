@@ -1,4 +1,7 @@
-import type { FormEvent } from "react";
+import type { FormEvent, KeyboardEvent } from "react";
+
+import { Button } from "../ui";
+import styles from "./PromptBar.module.css";
 
 interface PromptBarProps {
   prompt: string;
@@ -12,10 +15,10 @@ interface PromptBarProps {
 }
 
 /**
- * The prompt input bar (F10): a textarea plus a "Run Flow" submit. Submission
- * is blocked while a run is in flight, when the prompt is empty/whitespace, or
- * when the graph is not runnable (`disabledReason`). The trimmed prompt is
- * passed to `onSubmit`.
+ * The prompt input bar (F10): a mono textarea plus a "Run Flow" submit.
+ * Submission is blocked while a run is in flight, when the prompt is
+ * empty/whitespace, or when the graph is not runnable (`disabledReason`).
+ * Cmd/Ctrl+Enter submits. The trimmed prompt is passed to `onSubmit`.
  */
 export function PromptBar({
   prompt,
@@ -27,28 +30,50 @@ export function PromptBar({
   const trimmed = prompt.trim();
   const blocked = isRunning || trimmed.length === 0 || Boolean(disabledReason);
 
-  const handleSubmit = (event: FormEvent) => {
-    event.preventDefault();
+  const submit = () => {
     if (blocked) return;
     onSubmit(trimmed);
   };
 
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    submit();
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      event.preventDefault();
+      submit();
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit} aria-label="Run prompt">
+    <form className={styles.bar} onSubmit={handleSubmit} aria-label="Run prompt">
       <textarea
+        className={styles.textarea}
         aria-label="Prompt"
         value={prompt}
         onChange={(e) => onPromptChange(e.target.value)}
-        placeholder="Enter a message to run the flow…"
+        onKeyDown={handleKeyDown}
+        placeholder="Enter a message to run the flow…  (⌘/Ctrl+Enter)"
         rows={3}
         disabled={isRunning}
-        style={{ width: "100%", resize: "vertical", boxSizing: "border-box" }}
       />
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-        <button type="submit" disabled={blocked}>
-          {isRunning ? "Running…" : "Run Flow"}
-        </button>
-        {disabledReason && !isRunning && <span role="status">{disabledReason}</span>}
+      <div className={styles.footer}>
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={blocked}
+          loading={isRunning}
+          loadingLabel="Running…"
+        >
+          Run Flow
+        </Button>
+        {disabledReason && !isRunning && (
+          <span className={styles.reason} role="status">
+            {disabledReason}
+          </span>
+        )}
       </div>
     </form>
   );

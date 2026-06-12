@@ -1,0 +1,63 @@
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.turn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 88%;
+}
+
+.user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.assistant {
+  align-self: flex-start;
+}
+
+.system {
+  align-self: stretch;
+  max-width: 100%;
+}
+
+.role {
+  font-size: var(--text-caption-size);
+  line-height: var(--text-caption-line);
+  font-weight: var(--weight-medium);
+  color: var(--text-muted);
+}
+
+.bubble {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.userBubble {
+  background: var(--accent-subtle);
+  color: var(--text-primary);
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+.assistantBubble {
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-bottom-left-radius: var(--radius-sm);
+}
+
+.systemBubble {
+  background: var(--warning-subtle);
+  border-left: 3px solid var(--warning);
+  color: var(--text-primary);
+}

@@ -1,27 +1,34 @@
 import { UserButton } from "@clerk/clerk-react";
 import { NavLink } from "react-router-dom";
 
-const linkStyle = ({ isActive }: { isActive: boolean }): React.CSSProperties => ({
-  fontWeight: isActive ? 700 : 400,
-  textDecoration: "none",
-  marginRight: "1rem",
-});
+import { ThemeToggle } from "./ui/ThemeToggle";
+import styles from "./NavBar.module.css";
 
-/** Primary navigation between the Agents, Flows, and Settings workspaces, plus
- * the Clerk session/sign-out control. */
+const ITEMS = [
+  { to: "/agents", label: "Agents" },
+  { to: "/flows", label: "Flows" },
+  { to: "/settings", label: "Settings" },
+] as const;
+
+const linkClass = ({ isActive }: { isActive: boolean }) =>
+  isActive ? `${styles.link} ${styles.active}` : styles.link;
+
+/** Primary navigation as a segmented control (active = accent-subtle pill +
+ * aria-current via NavLink), plus the theme toggle and Clerk session control. */
 export function NavBar() {
   return (
-    <nav aria-label="Primary">
-      <NavLink to="/agents" style={linkStyle}>
-        Agents
-      </NavLink>
-      <NavLink to="/flows" style={linkStyle}>
-        Flows
-      </NavLink>
-      <NavLink to="/settings" style={linkStyle}>
-        Settings
-      </NavLink>
-      <UserButton afterSignOutUrl="/sign-in" />
+    <nav className={styles.nav} aria-label="Primary">
+      <div className={styles.segments}>
+        {ITEMS.map((item) => (
+          <NavLink key={item.to} to={item.to} className={linkClass}>
+            {item.label}
+          </NavLink>
+        ))}
+      </div>
+      <div className={styles.controls}>
+        <ThemeToggle />
+        <UserButton afterSignOutUrl="/sign-in" />
+      </div>
     </nav>
   );
 }

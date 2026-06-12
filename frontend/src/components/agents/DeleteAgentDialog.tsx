@@ -1,4 +1,5 @@
 import type { Agent } from "../../lib/agents";
+import { Alert, Button, Modal } from "../ui";
 
 interface DeleteAgentDialogProps {
   agent: Agent;
@@ -25,33 +26,49 @@ export function DeleteAgentDialog({
   error = null,
 }: DeleteAgentDialogProps) {
   return (
-    <div role="dialog" aria-modal="true" aria-label={`Delete agent ${agent.name}`}>
-      <h3>Delete agent</h3>
-      <p>
+    <Modal
+      open
+      onClose={onCancel}
+      title="Delete agent"
+      size="sm"
+      busy={isDeleting}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onCancel} disabled={isDeleting}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            onClick={onConfirm}
+            disabled={isDeleting}
+            loading={isDeleting}
+            loadingLabel="Deleting…"
+          >
+            Delete
+          </Button>
+        </>
+      }
+    >
+      <p style={{ margin: 0 }}>
         Delete <strong>{agent.name}</strong>? This cannot be undone.
       </p>
 
       {referencedFlows.length > 0 && (
-        <div role="alert">
-          <p>This agent is referenced by the following flows:</p>
-          <ul>
-            {referencedFlows.map((flow) => (
-              <li key={flow}>{flow}</li>
-            ))}
-          </ul>
+        <div style={{ marginTop: "var(--space-3)" }}>
+          <Alert variant="warning" role="alert" title="Referenced by flows">
+            Removing this agent will flag its nodes as missing in:{" "}
+            {referencedFlows.join(", ")}.
+          </Alert>
         </div>
       )}
 
-      {error && <p role="alert">{error}</p>}
-
-      <div>
-        <button type="button" onClick={onConfirm} disabled={isDeleting}>
-          Delete
-        </button>
-        <button type="button" onClick={onCancel} disabled={isDeleting}>
-          Cancel
-        </button>
-      </div>
-    </div>
+      {error && (
+        <div style={{ marginTop: "var(--space-3)" }}>
+          <Alert variant="danger" role="alert">
+            {error}
+          </Alert>
+        </div>
+      )}
+    </Modal>
   );
 }

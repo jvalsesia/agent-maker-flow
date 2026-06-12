@@ -13,6 +13,7 @@ vi.mock("@clerk/clerk-react", () => ({
   SignUp: () => null,
 }));
 
+import { ThemeProvider } from "../hooks/useTheme";
 import { routes } from "../routes/router";
 
 function Routed() {
@@ -20,13 +21,16 @@ function Routed() {
 }
 
 function renderApp(initialEntries: string[]) {
-  // The Agents page reads via react-query, so the shell needs a query client.
+  // The Agents page reads via react-query, so the shell needs a query client;
+  // the top-bar theme toggle needs a ThemeProvider.
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={initialEntries}>
-        <Routed />
-      </MemoryRouter>
+      <ThemeProvider>
+        <MemoryRouter initialEntries={initialEntries}>
+          <Routed />
+        </MemoryRouter>
+      </ThemeProvider>
     </QueryClientProvider>,
   );
 }

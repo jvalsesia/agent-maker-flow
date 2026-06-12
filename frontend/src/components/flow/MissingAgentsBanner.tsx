@@ -1,3 +1,5 @@
+import styles from "./MissingAgentsBanner.module.css";
+
 interface MissingAgentsBannerProps {
   /** Agent ids referenced by nodes but absent from the registry (F07
    *  `missingAgentIds`). Empty means every node resolves and nothing renders. */
@@ -14,14 +16,26 @@ export function MissingAgentsBanner({ missingAgentIds }: MissingAgentsBannerProp
   if (missingAgentIds.length === 0) return null;
 
   return (
-    <div role="alert" aria-label="Missing agents">
-      <p>
-        {missingAgentIds.length} node(s) reference an agent that no longer exists. Remove or
-        repoint them before running.
+    <div className={styles.banner} role="alert" aria-label="Missing agents">
+      <p className={styles.message}>
+        <svg
+          className={styles.icon}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 3h.01M12 3l9 16H3l9-16z" />
+        </svg>
+        {missingAgentIds.length} node(s) reference an agent that no longer exists. Remove or repoint
+        them before running.
       </p>
-      <ul>
+      <ul className={styles.ids}>
         {missingAgentIds.map((id) => (
-          <li key={id}>{id}</li>
+          <li key={id} className={styles.id}>
+            {id}
+          </li>
         ))}
       </ul>
     </div>

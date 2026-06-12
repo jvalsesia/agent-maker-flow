@@ -7,6 +7,8 @@ import {
   useUpdateMemoryRecord,
   type MemoryRecord,
 } from "../lib/memory";
+import { Alert, Button, Spinner, Textarea } from "./ui";
+import styles from "./MemoryRecordForm.module.css";
 
 interface MemoryRecordFormProps {
   /** Record to edit; omitted for create mode. */
@@ -58,32 +60,59 @@ export function MemoryRecordForm({ record, onSaved, onCancel }: MemoryRecordForm
         : null;
 
   return (
-    <form onSubmit={handleSubmit} aria-label={isEditing ? "Edit memory record" : "Add memory record"}>
-      <label htmlFor="memory-text">Memory text</label>
-      <br />
-      <textarea
-        id="memory-text"
+    <form
+      className={styles.form}
+      onSubmit={handleSubmit}
+      aria-label={isEditing ? "Edit memory record" : "Add memory record"}
+    >
+      <Textarea
+        label="Memory text"
+        mono
+        rows={4}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        aria-invalid={overLimit ? true : undefined}
+        error={overLimit ? "Memory record must be 8000 characters or fewer." : undefined}
       />
-      <p aria-label="character count">
-        {length} / {MEMORY_TEXT_MAX}
-      </p>
-      {overLimit && <p role="alert">Memory record must be 8000 characters or fewer.</p>}
+      <div className={styles.counterRow}>
+        <p
+          aria-label="character count"
+          className={[styles.counter, overLimit && styles.counterOver].filter(Boolean).join(" ")}
+        >
+          {length} / {MEMORY_TEXT_MAX}
+        </p>
+      </div>
 
-      {active.isPending && <p role="status">Embedding…</p>}
-      {active.isSuccess && !active.isPending && <p role="status">Stored.</p>}
-      {errorMessage && <p role="alert">{errorMessage}</p>}
+      {active.isPending && (
+        <p className={styles.status} role="status">
+          <Spinner size="sm" label="" />
+          Embedding…
+        </p>
+      )}
+      {active.isSuccess && !active.isPending && (
+        <p className={styles.status} role="status">
+          Stored.
+        </p>
+      )}
+      {errorMessage && (
+        <Alert variant="danger" role="alert">
+          {errorMessage}
+        </Alert>
+      )}
 
-      <div>
-        <button type="submit" disabled={!canSubmit}>
-          {active.isPending ? "Embedding…" : isEditing ? "Save changes" : "Add record"}
-        </button>
+      <div className={styles.actions}>
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={!canSubmit}
+          loading={active.isPending}
+          loadingLabel="Embedding…"
+        >
+          {isEditing ? "Save changes" : "Add record"}
+        </Button>
         {onCancel && (
-          <button type="button" onClick={onCancel} disabled={active.isPending}>
+          <Button variant="secondary" onClick={onCancel} disabled={active.isPending}>
             Cancel
-          </button>
+          </Button>
         )}
       </div>
     </form>
