@@ -1,0 +1,63 @@
+.dot {
+  display: inline-block;
+  flex: none;
+  border-radius: var(--radius-full);
+  background: var(--dot-color, var(--text-muted));
+  position: relative;
+}
+
+.sm {
+  width: 8px;
+  height: 8px;
+}
+
+.md {
+  width: 10px;
+  height: 10px;
+}
+
+.idle,
+.skipped {
+  --dot-color: var(--text-muted);
+}
+
+.running {
+  --dot-color: var(--running);
+}
+
+.complete {
+  --dot-color: var(--success);
+}
+
+.error {
+  --dot-color: var(--danger);
+}
+
+/* Pulsing ring while running — the core observability cue (spec §3.6). */
+.running::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-full);
+  background: var(--running);
+  animation: status-pulse var(--motion-pulse) var(--ease) infinite;
+}
+
+@keyframes status-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  70%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .running::after {
+    animation: none;
+    display: none;
+  }
+}
