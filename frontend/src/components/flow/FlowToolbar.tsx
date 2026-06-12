@@ -5,9 +5,11 @@ interface FlowToolbarProps {
   hasRoot: boolean;
   /** Count of nodes whose referenced agent was deleted from the registry. */
   missingAgentCount: number;
+  /** True while a run is in flight (F10): the control reflects "Running…". */
+  isRunning?: boolean;
   /**
    * The run action. F07 only wires the disabled-state UX; the actual execution
-   * handler is supplied by F09. When omitted, the control stays inert.
+   * handler is supplied by F09/F10. When omitted, the control stays inert.
    */
   onRun?: () => void;
 }
@@ -18,7 +20,13 @@ interface FlowToolbarProps {
  * exists; a node referencing a deleted agent also blocks running. The actual
  * execution is a deferred seam for F09.
  */
-export function FlowToolbar({ hasNodes, hasRoot, missingAgentCount, onRun }: FlowToolbarProps) {
+export function FlowToolbar({
+  hasNodes,
+  hasRoot,
+  missingAgentCount,
+  isRunning = false,
+  onRun,
+}: FlowToolbarProps) {
   const message = !hasNodes
     ? "Add an agent to the canvas before running."
     : !hasRoot
@@ -27,12 +35,12 @@ export function FlowToolbar({ hasNodes, hasRoot, missingAgentCount, onRun }: Flo
         ? "Resolve missing agents before running."
         : null;
 
-  const disabled = message !== null;
+  const disabled = message !== null || isRunning;
 
   return (
     <div role="toolbar" aria-label="Flow actions">
       <button type="button" disabled={disabled} onClick={onRun}>
-        Run Flow
+        {isRunning ? "Running…" : "Run Flow"}
       </button>
       {message && (
         <span role="status" style={{ marginLeft: 8 }}>

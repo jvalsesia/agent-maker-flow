@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ReactFlowProvider, type Connection } from "@xyflow/react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -7,6 +7,11 @@ import * as ops from "../lib/flowGraph";
 import type { FlowGraph } from "../lib/flowGraph";
 import { useFlowGraph } from "../lib/useFlowGraph";
 import { apiGet, ApiClientError } from "../lib/apiClient";
+import { startRun } from "../lib/runs";
+import { EMPTY_OUTPUT_MESSAGE, nodeStatusMap } from "../lib/runStream";
+import { useRunStream } from "../hooks/useRunStream";
+import { ConversationMonitor } from "../components/monitor/ConversationMonitor";
+import type { ConversationTurn } from "../components/monitor/ConversationTurns";
 import {
   flowQueryKey,
   useCreateFlow,
@@ -85,6 +90,17 @@ export function FlowsPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<{ run: () => void } | null>(null);
 
+  // F10 run state: the current prompt, the active run id, and the session turns.
+  const [prompt, setPrompt] = useState("");
+  const [runId, setRunId] = useState<string | null>(null);
+  const [turns, setTurns] = useState<ConversationTurn[]>([]);
+  const finishedRunRef = useRef<string | null>(null);
+
+  const { state: runState, connection } = useRunStream(runId);
+  const isRunning = runId !== null && runState.status === "running";
+  const nodeStatuses = useMemo(() => nodeStatusMap(runState), [runState]);
+  const runNodes = useMemo(() => Object.values(runState.nodes), [runState.nodes]);
+
   const agentsById = useMemo(() => {
     const map = new Map<string, Agent>();
     for (const agent of agents ?? []) map.set(agent.id, agent);
@@ -98,6 +114,58 @@ export function FlowsPage() {
   );
 
   const isDirty = fingerprint(flow.graph) !== savedFingerprint;
+
+  // Why the run control is blocked (null = runnable), mirroring FlowToolbar.
+  const runDisabledReason =
+    flow.nodes.length === 0
+      ? "Add an agent to the canvas before running."
+      : flow.rootNodeId === null
+        ? "Assign a Root Agent before running."
+        : missingIds.length > 0
+          ? "Resolve missing agents before running."
+          : null;
+
+  /** Dispatch a run for the live canvas; map a rejection to a system turn. */
+  const handleRun = useCallback(
+    async (submitted: string) => {
+      const text = submitted.trim();
+      if (!text || isRunning || runDisabledReason) return;
+
+      const stamp = `${flow.nodes.length}-${turns.length}`;
+      setTurns((prev) => [...prev, { id: `user-${stamp}`, role: "user", content: text }]);
+      setPrompt("");
+
+      try {
+        const accepted = await startRun({
+          prompt: text,
+          graph: flow.graph,
+          flowId: activeFlowId ?? undefined,
+        });
+        finishedRunRef.current = null;
+        setRunId(accepted.runId);
+      } catch (err) {
+        const message =
+          err instanceof ApiClientError ? err.message : "Could not start the run. Please retry.";
+        setTurns((prev) => [...prev, { id: `system-${stamp}`, role: "system", content: message }]);
+        setRunId(null);
+      }
+    },
+    [isRunning, runDisabledReason, flow.nodes.length, flow.graph, turns.length, activeFlowId],
+  );
+
+  // When the active run reaches a terminal state, append the assistant turn
+  // (the aggregated output, or the empty-output notice), exactly once per run.
+  useEffect(() => {
+    if (!runId) return;
+    if (runState.status !== "succeeded" && runState.status !== "failed") return;
+    if (finishedRunRef.current === runId) return;
+    finishedRunRef.current = runId;
+    const content =
+      runState.output && runState.output.trim().length > 0
+        ? runState.output
+        : EMPTY_OUTPUT_MESSAGE;
+    setTurns((prev) => [...prev, { id: `assistant-${runId}`, role: "assistant", content }]);
+  }, [runId, runState.status, runState.output]);
 
   const handleConnect = useCallback(
     (connection: Connection) => {
@@ -224,12 +292,21 @@ export function FlowsPage() {
     () => ({
       agentsById,
       rootNodeId: flow.rootNodeId,
+      nodeStatuses,
       onSetRoot: flow.setRoot,
       onDuplicate: flow.duplicateNode,
       onDetach: flow.detachNode,
       onDelete: flow.removeNode,
     }),
-    [agentsById, flow.rootNodeId, flow.setRoot, flow.duplicateNode, flow.detachNode, flow.removeNode],
+    [
+      agentsById,
+      flow.rootNodeId,
+      nodeStatuses,
+      flow.setRoot,
+      flow.duplicateNode,
+      flow.detachNode,
+      flow.removeNode,
+    ],
   );
 
   return (
@@ -278,6 +355,8 @@ export function FlowsPage() {
               hasNodes={flow.nodes.length > 0}
               hasRoot={flow.rootNodeId !== null}
               missingAgentCount={missingIds.length}
+              isRunning={isRunning}
+              onRun={() => void handleRun(prompt)}
             />
 
             <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
@@ -297,6 +376,22 @@ export function FlowsPage() {
             </div>
           </div>
         </ReactFlowProvider>
+
+        <aside
+          aria-label="Conversation monitor panel"
+          style={{ width: 340, borderLeft: "1px solid #ddd", paddingLeft: 12 }}
+        >
+          <ConversationMonitor
+            turns={turns}
+            nodes={runNodes}
+            connection={connection}
+            isRunning={isRunning}
+            prompt={prompt}
+            onPromptChange={setPrompt}
+            onSubmit={(submitted) => void handleRun(submitted)}
+            runDisabledReason={runDisabledReason}
+          />
+        </aside>
       </div>
 
       {saveDialog && (

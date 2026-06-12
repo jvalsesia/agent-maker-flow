@@ -3,6 +3,16 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 
 import type { Agent } from "../../lib/agents";
 import type { FlowNode } from "../../lib/flowGraph";
+import type { NodeStatus } from "../../lib/runStream";
+
+/** Badge label + colour per live run status (mirrors the monitor's NodeBlock). */
+const STATUS_BADGE: Record<NodeStatus, { label: string; color: string }> = {
+  idle: { label: "Idle", color: "#9aa0a6" },
+  running: { label: "Running", color: "#1a73e8" },
+  complete: { label: "Complete", color: "#188038" },
+  error: { label: "Error", color: "#b00020" },
+  skipped: { label: "Skipped", color: "#9aa0a6" },
+};
 
 /**
  * Per-canvas context consumed by every {@link AgentNode}. Keeping the agent
@@ -15,6 +25,8 @@ export interface FlowNodeContextValue {
   agentsById: Map<string, Agent>;
   /** The single Root Agent (null until assigned). */
   rootNodeId: string | null;
+  /** Live per-node run status (F10); empty/absent when no run is active. */
+  nodeStatuses?: Record<string, NodeStatus>;
   onSetRoot: (nodeId: string) => void;
   onDuplicate: (nodeId: string) => void;
   onDetach: (nodeId: string) => void;
@@ -34,6 +46,8 @@ export function AgentNode({ id, data }: NodeProps<FlowNode>) {
   const agent = ctx?.agentsById.get(data.agentId);
   const isRoot = ctx?.rootNodeId === id;
   const isMissing = !agent;
+  const status = ctx?.nodeStatuses?.[id];
+  const badge = status ? STATUS_BADGE[status] : null;
 
   return (
     <div
@@ -63,6 +77,24 @@ export function AgentNode({ id, data }: NodeProps<FlowNode>) {
         )}
         {isRoot && <span aria-label="Root Agent">Root</span>}
       </div>
+
+      {badge && (
+        <div
+          aria-label={`Status: ${badge.label}`}
+          style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}
+        >
+          <span
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: badge.color,
+              display: "inline-block",
+            }}
+          />
+          <small style={{ color: badge.color }}>{badge.label}</small>
+        </div>
+      )}
 
       <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
         <button

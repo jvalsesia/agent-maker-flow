@@ -75,4 +75,14 @@ describe("AgentNode", () => {
     await userEvent.click(screen.getByRole("button", { name: "Set root" }));
     expect(value.onSetRoot).toHaveBeenCalledWith("node-7");
   });
+
+  it("renders the live run-status badge from context (F10)", () => {
+    renderNode(nodeProps("node-1", "agent-1"), { nodeStatuses: { "node-1": "running" } });
+    expect(screen.getByLabelText("Status: Running")).toBeInTheDocument();
+  });
+
+  it("shows no status badge when no run is active", () => {
+    renderNode(nodeProps("node-1", "agent-1"));
+    expect(screen.queryByLabelText(/^Status:/)).not.toBeInTheDocument();
+  });
 });
