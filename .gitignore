@@ -7,6 +7,10 @@ node_modules/
 /frontend/dist/
 .vite/
 
+# pnpm — this repo uses npm (package-lock.json); ignore stray pnpm artifacts
+pnpm-lock.yaml
+pnpm-workspace.yaml
+
 # Env
 .env
 .env.local
