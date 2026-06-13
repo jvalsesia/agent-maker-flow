@@ -40,10 +40,14 @@ fn default_scope() -> String {
     "all".to_string()
 }
 
-/// POST/PUT body for a memory record.
+/// POST/PUT body for a memory record. `agent_id`, when present, scopes the
+/// record to one of the caller's agents so an agent with `memory_scope = "own"`
+/// retrieves it (F06); omitted/null means a global record.
 #[derive(Debug, Clone, Deserialize)]
 pub struct MemoryRecordInput {
     pub text: String,
+    #[serde(default)]
+    pub agent_id: Option<Uuid>,
 }
 
 /// A memory record row as stored (the `embedding` vector is selected out only
@@ -53,6 +57,8 @@ pub struct MemoryRecordRow {
     pub id: Uuid,
     pub text: String,
     pub embedding_model: String,
+    /// The agent this record is scoped to, or `None` for a global record.
+    pub agent_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -64,6 +70,8 @@ pub struct MemoryRecord {
     pub id: Uuid,
     pub text: String,
     pub embedding_model: String,
+    /// The agent this record is scoped to, or `null` for a global record.
+    pub agent_id: Option<Uuid>,
     pub char_count: usize,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -76,6 +84,7 @@ impl From<MemoryRecordRow> for MemoryRecord {
             id: row.id,
             text: row.text,
             embedding_model: row.embedding_model,
+            agent_id: row.agent_id,
             char_count,
             created_at: row.created_at,
             updated_at: row.updated_at,

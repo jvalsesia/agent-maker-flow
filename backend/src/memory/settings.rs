@@ -59,8 +59,13 @@ pub async fn set_embedding_model(
     Ok(model.to_string())
 }
 
-/// Whether the caller owns the given agent (used to scope profile writes).
-async fn agent_owned_by(pool: &PgPool, user_id: &str, agent_id: Uuid) -> Result<bool, AppError> {
+/// Whether the caller owns the given agent (used to scope profile writes and to
+/// validate a memory record's `agent_id` in `store`).
+pub(super) async fn agent_owned_by(
+    pool: &PgPool,
+    user_id: &str,
+    agent_id: Uuid,
+) -> Result<bool, AppError> {
     let exists: bool =
         sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM agents WHERE id = $1 AND owner_id = $2)")
             .bind(agent_id)

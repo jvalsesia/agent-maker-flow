@@ -15,10 +15,29 @@ use crate::gateway::types::EmbeddingRequest;
 use crate::gateway::GatewayClient;
 
 /// Columns for the client-facing read shape (the `embedding` vector is omitted).
-const COLUMNS: &str = "id, text, embedding_model, created_at, updated_at";
+const COLUMNS: &str = "id, text, embedding_model, agent_id, created_at, updated_at";
 
 fn internal(e: sqlx::Error, ctx: &'static str) -> AppError {
     AppError::Internal(anyhow::anyhow!(e).context(ctx))
+}
+
+/// Reject an `agent_id` that does not reference one of the caller's agents. A
+/// `None` (global record) is always allowed. Returns a validation error rather
+/// than `NotFound` because the id arrives as a field of the record body.
+async fn validate_agent(
+    pool: &PgPool,
+    user_id: &str,
+    agent_id: Option<Uuid>,
+) -> Result<(), AppError> {
+    if let Some(id) = agent_id {
+        if !settings::agent_owned_by(pool, user_id, id).await? {
+            return Err(AppError::Validation {
+                code: "MEM_VALIDATION",
+                message: "agent_id does not reference one of your agents.".to_string(),
+            });
+        }
+    }
+    Ok(())
 }
 
 /// Enforce the 1–8,000 character bound on record text.
@@ -59,23 +78,28 @@ async fn embed_with_global_model(
 }
 
 /// Create a memory record: validate, embed, then insert (only on embed success).
+/// `agent_id`, when `Some`, scopes the record to that agent (must be owned by
+/// the caller); `None` stores a global record.
 pub async fn create(
     pool: &PgPool,
     gateway: &GatewayClient,
     user_id: &str,
+    agent_id: Option<Uuid>,
     text: &str,
 ) -> Result<MemoryRecord, AppError> {
     validate_text(text)?;
+    validate_agent(pool, user_id, agent_id).await?;
     let (model, embedding) = embed_with_global_model(pool, gateway, user_id, text).await?;
 
     let row = sqlx::query_as::<_, MemoryRecordRow>(&format!(
-        "INSERT INTO memory_records (user_id, text, embedding, embedding_model) \
-         VALUES ($1, $2, $3, $4) RETURNING {COLUMNS}"
+        "INSERT INTO memory_records (user_id, text, embedding, embedding_model, agent_id) \
+         VALUES ($1, $2, $3, $4, $5) RETURNING {COLUMNS}"
     ))
     .bind(user_id)
     .bind(text)
     .bind(embedding)
     .bind(&model)
+    .bind(agent_id)
     .fetch_one(pool)
     .await
     .map_err(|e| internal(e, "failed to insert memory record"))?;
@@ -116,9 +140,11 @@ pub async fn update(
     gateway: &GatewayClient,
     user_id: &str,
     id: Uuid,
+    agent_id: Option<Uuid>,
     text: &str,
 ) -> Result<MemoryRecord, AppError> {
     validate_text(text)?;
+    validate_agent(pool, user_id, agent_id).await?;
 
     // Confirm ownership before spending an embedding call on a foreign record.
     let owned: bool =
@@ -136,7 +162,7 @@ pub async fn update(
 
     let row = sqlx::query_as::<_, MemoryRecordRow>(&format!(
         "UPDATE memory_records \
-         SET text = $3, embedding = $4, embedding_model = $5, updated_at = now() \
+         SET text = $3, embedding = $4, embedding_model = $5, agent_id = $6, updated_at = now() \
          WHERE id = $1 AND user_id = $2 RETURNING {COLUMNS}"
     ))
     .bind(id)
@@ -144,6 +170,7 @@ pub async fn update(
     .bind(text)
     .bind(embedding)
     .bind(&model)
+    .bind(agent_id)
     .fetch_optional(pool)
     .await
     .map_err(|e| internal(e, "failed to update memory record"))?

@@ -29,7 +29,8 @@ pub async fn create(
     user: AuthUser,
     Json(input): Json<MemoryRecordInput>,
 ) -> Result<(StatusCode, Json<Value>), AppError> {
-    let record = store::create(&state.db, &state.gateway, &user.id, &input.text).await?;
+    let record =
+        store::create(&state.db, &state.gateway, &user.id, input.agent_id, &input.text).await?;
     Ok((
         StatusCode::CREATED,
         Json(json!({ "status": "success", "data": record })),
@@ -43,7 +44,8 @@ pub async fn update(
     Path(id): Path<Uuid>,
     Json(input): Json<MemoryRecordInput>,
 ) -> Result<Json<Value>, AppError> {
-    let record = store::update(&state.db, &state.gateway, &user.id, id, &input.text).await?;
+    let record =
+        store::update(&state.db, &state.gateway, &user.id, id, input.agent_id, &input.text).await?;
     Ok(Json(json!({ "status": "success", "data": record })))
 }
 
