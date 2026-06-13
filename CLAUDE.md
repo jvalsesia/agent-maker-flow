@@ -13,7 +13,7 @@ Two independently-tooled top-level apps (not a Cargo/npm workspace):
 - `backend/` — Rust Axum (v0.8.9) service, REST under `/api/v1` + SSE.
 - `frontend/` — React 18 + Vite + TypeScript SPA.
 - `litellm/config.yaml` — model catalog for the LiteLLM proxy (the single gateway for every provider completion/embedding call). Add models here, not in the backend.
-- `docs/F01..F09/` — per-feature `spec.md` + `plan.md` (see Feature workflow).
+- `docs/F01..F11/` — per-feature `spec.md` + `plan.md` (see Feature workflow). F01–F10 are the PRD features; F11 is the design-system / UI-polish pass.
 
 ## Common commands
 
@@ -53,15 +53,19 @@ Copy `backend/.env.example` → `backend/.env` and `frontend/.env.example` → `
 
 **Shared state** is `AppState` (`state.rs`) — `db: PgPool`, `redis: deadpool-redis Pool`, `config`, `auth: Arc<AuthState>`, `gateway: Arc<GatewayClient>`. Cheap to clone; injected into every handler.
 
-**Feature modules follow a consistent shape.** Each domain (`agents/`, `flows/`, `memory/`, `gateway/`, `auth/`) is a module folder, and most expose:
+**Feature modules follow a consistent shape.** Each domain (`agents/`, `flows/`, `memory/`, `gateway/`, `auth/`, `runs/`) is a module folder, and most expose:
 - `model.rs` — domain types + input DTOs (serde).
 - `repo.rs` — owner-scoped `sqlx` queries (hand-written SQL; no ORM).
 - `service.rs` — validation, uniqueness, and gateway orchestration.
 - `mod.rs` — re-exports the public surface.
 
+Two modules deviate where the domain calls for it:
+- `memory/` (F05/F06) splits by concern instead of the repo/service pair — `types.rs`, `settings.rs` (embedding model + per-agent semantic profiles), `store.rs` (embed-on-save records), `retrieval.rs` (cosine-similarity search for RAG).
+- `runs/` (F09) is the flow-execution engine — `graph.rs` (canvas → DAG + cycle/root validation), `engine.rs` (dependency-order execution, prompt assembly, memory injection), `registry.rs` (in-flight run tracking), plus `model.rs`/`service.rs`.
+
 HTTP handlers live separately in `routes/*.rs` and call into the service layer. `lib.rs` exposes everything so both the binary and the `tests/` integration suite can build the app.
 
-**Routing** (`routes/mod.rs`): `/health` is public; everything else (`/me`, `/providers`, `/agents`, `/flows`, `/memory`, `/settings/*`, `/sse/heartbeat`) sits behind the `require_auth` Clerk-JWT middleware. Ownership is enforced in the repo layer — queries are scoped to the authenticated user, and a record owned by another user returns `NotFound` (never reveals existence).
+**Routing** (`routes/mod.rs`): `/health` is public; everything else (`/me`, `/providers`, `/agents`, `/flows`, `/memory`, `/settings/*`, `/runs` + its SSE stream, `/sse/heartbeat`) sits behind the `require_auth` Clerk-JWT middleware. Ownership is enforced in the repo layer — queries are scoped to the authenticated user, and a record owned by another user returns `NotFound` (never reveals existence).
 
 **Response envelope is platform-wide and load-bearing** — the frontend `apiClient` parses exactly these shapes:
 - success: `{ "status": "success", "data": <T> }`
@@ -88,6 +92,6 @@ Integration tests in `backend/tests/` spin up the real Axum app against `DATABAS
 
 ## Feature workflow
 
-Work is organized as numbered features `F01`–`F09`, each with `docs/FXX-*/spec.md` and `plan.md`. The `implement-feature` skill (`.agents/skills/`) reads a feature's spec + plan, implements it phase by phase, and commits **one commit per phase** on the current branch — matching the existing history (`feat(F08): stage N — ...`). Code comments reference the feature that introduced them (e.g. `// ... (F03)`), which is a useful way to trace why something exists.
+Work is organized as numbered features `F01`–`F11`, each with `docs/FXX-*/spec.md` and `plan.md`. The `implement-feature` skill (`.agents/skills/`) reads a feature's spec + plan, implements it phase by phase, and commits **one commit per phase** on the current branch — matching the existing history (`feat(F08): stage N — ...`). Code comments reference the feature that introduced them (e.g. `// ... (F03)`), which is a useful way to trace why something exists.
 
 Other skills under `.agents/skills/`: `spec-writer`, `prd-writer`, `rust-best-practices`, `vercel-react-best-practices`.
