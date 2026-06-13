@@ -32,12 +32,21 @@ export function emptyGraph(): FlowGraph {
   return { nodes: [], edges: [], rootNodeId: null };
 }
 
-let nodeSeq = 0;
-
-/** Monotonic node id generator (`node-1`, `node-2`, …). */
-function nextNodeId(): string {
-  nodeSeq += 1;
-  return `node-${nodeSeq}`;
+/**
+ * Next collision-free node id (`node-1`, `node-2`, …), derived from the ids
+ * already in the graph rather than a module-global counter. Deriving it from
+ * the graph is what makes it safe after `load()` rehydrates a saved flow: a
+ * fresh session's counter has no idea `node-1..3` already exist, so a global
+ * counter would re-mint a colliding id. We take one past the highest existing
+ * `node-N` suffix instead.
+ */
+function nextNodeId(graph: FlowGraph): string {
+  let max = 0;
+  for (const node of graph.nodes) {
+    const match = /^node-(\d+)$/.exec(node.id);
+    if (match) max = Math.max(max, Number(match[1]));
+  }
+  return `node-${max + 1}`;
 }
 
 /** Build a stable edge id from its endpoints. */
@@ -105,7 +114,7 @@ export function addAgentNode(
   position: { x: number; y: number },
 ): FlowGraph {
   const node: FlowNode = {
-    id: nextNodeId(),
+    id: nextNodeId(graph),
     type: "agent",
     position,
     data: { agentId },
@@ -149,7 +158,7 @@ export function duplicateNode(graph: FlowGraph, nodeId: string): FlowGraph {
   const source = graph.nodes.find((node) => node.id === nodeId);
   if (!source) return graph;
   const copy: FlowNode = {
-    id: nextNodeId(),
+    id: nextNodeId(graph),
     type: source.type,
     position: { x: source.position.x + 40, y: source.position.y + 40 },
     data: { agentId: source.data.agentId },

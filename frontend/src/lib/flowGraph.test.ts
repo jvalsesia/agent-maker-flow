@@ -97,6 +97,15 @@ describe("addAgentNode", () => {
     expect(after.nodes[0].position).toEqual({ x: 10, y: 20 });
     expect(before.nodes).toHaveLength(0); // immutable
   });
+
+  it("mints an id past the highest existing suffix, so a loaded flow never collides", () => {
+    // Simulates opening a saved flow: ids exist that no session counter knows about.
+    const loaded = graphOf(["node-1", "node-2", "node-3"], []);
+    const after = addAgentNode(loaded, "agent-x", { x: 0, y: 0 });
+    const newId = after.nodes[after.nodes.length - 1].id;
+    expect(newId).toBe("node-4");
+    expect(after.nodes.filter((n) => n.id === newId)).toHaveLength(1);
+  });
 });
 
 describe("connect", () => {
@@ -163,6 +172,14 @@ describe("duplicateNode", () => {
     expect(copy.id).not.toBe("A");
     expect(after.edges).toHaveLength(1); // original edge only
     expect(after.rootNodeId).toBe("A"); // copy is not root
+  });
+
+  it("gives the copy an id distinct from every existing node", () => {
+    const loaded = graphOf(["node-1", "node-2"], []);
+    const after = duplicateNode(loaded, "node-2");
+    const copyId = after.nodes[after.nodes.length - 1].id;
+    expect(copyId).toBe("node-3");
+    expect(after.nodes.filter((n) => n.id === copyId)).toHaveLength(1);
   });
 });
 
