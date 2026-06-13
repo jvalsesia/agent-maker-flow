@@ -4,6 +4,8 @@ import styles from "./MemoryRecordList.module.css";
 
 interface MemoryRecordListProps {
   records: MemoryRecord[];
+  /** Agent id → name, used to label a record scoped to a single agent (F06). */
+  agentNames?: Record<string, string>;
   onEdit: (record: MemoryRecord) => void;
   onDelete: (record: MemoryRecord) => void;
 }
@@ -12,7 +14,12 @@ interface MemoryRecordListProps {
  * The stored memory records. Each listed record has been embedded already, so
  * it shows a "Ready" status alongside its model and size, with edit/delete.
  */
-export function MemoryRecordList({ records, onEdit, onDelete }: MemoryRecordListProps) {
+export function MemoryRecordList({
+  records,
+  agentNames = {},
+  onEdit,
+  onDelete,
+}: MemoryRecordListProps) {
   if (records.length === 0) {
     return <p className={styles.empty}>No memory records yet. Add one to embed and store it.</p>;
   }
@@ -34,6 +41,16 @@ export function MemoryRecordList({ records, onEdit, onDelete }: MemoryRecordList
               </Badge>
               <span aria-hidden="true">·</span>
               <span>{record.char_count} chars</span>
+              {record.agent_id && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <Badge variant="accent">
+                    {agentNames[record.agent_id]
+                      ? `Private to ${agentNames[record.agent_id]}`
+                      : "Agent-scoped"}
+                  </Badge>
+                </>
+              )}
             </div>
           </div>
           <div className={styles.actions}>

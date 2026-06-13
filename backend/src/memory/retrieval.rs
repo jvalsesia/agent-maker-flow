@@ -73,34 +73,44 @@ fn internal(e: sqlx::Error, ctx: &'static str) -> AppError {
     AppError::Internal(anyhow::anyhow!(e).context(ctx))
 }
 
-/// Resolve the embedding model for an agent: the per-agent semantic profile
-/// override if one exists, otherwise the user's global model.
-async fn resolve_model(
+/// Resolve the embedding model and memory scope for an agent: the per-agent
+/// semantic profile override if one exists, otherwise the user's global model
+/// with the default `"all"` scope. `None` when no model is configured at all.
+async fn resolve(
     db: &PgPool,
     user_id: &str,
     agent_id: Uuid,
-) -> Result<Option<String>, AppError> {
+) -> Result<Option<(String, String)>, AppError> {
     if let Some(profile) = settings::get_semantic_profile(db, user_id, agent_id).await? {
-        return Ok(Some(profile.embedding_model));
+        return Ok(Some((profile.embedding_model, profile.memory_scope)));
     }
-    settings::get_embedding_model(db, user_id).await
+    Ok(settings::get_embedding_model(db, user_id)
+        .await?
+        .map(|model| (model, "all".to_string())))
 }
 
 /// Cosine top-K over the user's records in `model`'s space, plus the count of
-/// the user's records in *other* model spaces (excluded as mismatches).
+/// the user's records in *other* model spaces (excluded as mismatches). When
+/// `scope == "own"` both queries restrict to records tagged with `agent_id`
+/// (global, untagged records are excluded); any other scope means "all". The
+/// `$is_all OR agent_id = $agent` clause carries the scope into SQL — under
+/// "own", a NULL `agent_id` fails the equality and is dropped, as intended.
 async fn search(
     db: &PgPool,
     user_id: &str,
     model: &str,
     embedding: &[f32],
     k: i32,
+    scope: &str,
+    agent_id: Uuid,
 ) -> Result<(Vec<RetrievedRecord>, usize), AppError> {
     let query_vector = Vector::from(embedding.to_vec());
+    let is_all = scope != "own";
 
     let rows = sqlx::query_as::<_, (Uuid, String, f64)>(
         "SELECT id, text, 1 - (embedding <=> $1) AS score \
          FROM memory_records \
-         WHERE user_id = $2 AND embedding_model = $3 \
+         WHERE user_id = $2 AND embedding_model = $3 AND ($5 OR agent_id = $6) \
          ORDER BY embedding <=> $1 \
          LIMIT $4",
     )
@@ -108,6 +118,8 @@ async fn search(
     .bind(user_id)
     .bind(model)
     .bind(k as i64)
+    .bind(is_all)
+    .bind(agent_id)
     .fetch_all(db)
     .await
     .map_err(|e| internal(e, "cosine search failed"))?;
@@ -122,10 +134,13 @@ async fn search(
         .collect();
 
     let excluded: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM memory_records WHERE user_id = $1 AND embedding_model <> $2",
+        "SELECT count(*) FROM memory_records \
+         WHERE user_id = $1 AND embedding_model <> $2 AND ($3 OR agent_id = $4)",
     )
     .bind(user_id)
     .bind(model)
+    .bind(is_all)
+    .bind(agent_id)
     .fetch_one(db)
     .await
     .map_err(|e| internal(e, "mismatch count failed"))?;
@@ -148,8 +163,8 @@ pub async fn retrieve(
         return RetrievalOutcome::skipped("retrieval disabled (top_k = 0)");
     }
 
-    let model = match resolve_model(db, user_id, agent_id).await {
-        Ok(Some(model)) => model,
+    let (model, scope) = match resolve(db, user_id, agent_id).await {
+        Ok(Some(resolved)) => resolved,
         Ok(None) => return RetrievalOutcome::skipped("no embedding model"),
         Err(_) => return RetrievalOutcome::skipped("search error"),
     };
@@ -165,7 +180,7 @@ pub async fn retrieve(
         Err(_) => return RetrievalOutcome::skipped("embedding failed"),
     };
 
-    match search(db, user_id, &model, &embedding, k).await {
+    match search(db, user_id, &model, &embedding, k, &scope, agent_id).await {
         Ok((records, excluded_mismatched)) => RetrievalOutcome {
             retrieved_count: records.len(),
             records,

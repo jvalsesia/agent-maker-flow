@@ -16,6 +16,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use agent_maker_flow_backend::{
     agents::{repo as agents_repo, AgentInput},
+    auth::user as user_repo,
     cache,
     config::GatewayConfig,
     db,
@@ -44,6 +45,15 @@ fn nonce() -> String {
 
 fn fresh_user(tag: &str) -> String {
     format!("user_rag_{tag}_{}", nonce())
+}
+
+/// Provision the local `users` row that owner-scoped writes FK to. In the real
+/// app the `require_auth` middleware upserts this on the first request; these
+/// tests call the services directly, so they must do it themselves.
+async fn ensure_user(db: &PgPool, user: &str) {
+    user_repo::upsert_user(db, user, None)
+        .await
+        .expect("provision test user");
 }
 
 // --- Mock LiteLLM proxy: /model/info + input-encoded /embeddings ---
@@ -156,10 +166,76 @@ async fn setup(fail_embed: bool) -> Option<(PgPool, Arc<GatewayClient>, Arc<Atom
 
 /// Set the user's global model then seed a record whose text encodes its vector.
 async fn seed(db: &PgPool, gateway: &GatewayClient, user: &str, model: &str, text: &str) {
+    ensure_user(db, user).await;
     settings::set_embedding_model(db, gateway, user, model)
         .await
         .expect("set global model");
-    store::create(db, gateway, user, text).await.expect("create memory record");
+    store::create(db, gateway, user, None, text)
+        .await
+        .expect("create memory record");
+}
+
+/// Like `seed`, but tags the record to a specific agent (memory_scope = "own").
+async fn seed_for_agent(
+    db: &PgPool,
+    gateway: &GatewayClient,
+    user: &str,
+    model: &str,
+    agent_id: Uuid,
+    text: &str,
+) {
+    ensure_user(db, user).await;
+    settings::set_embedding_model(db, gateway, user, model)
+        .await
+        .expect("set global model");
+    store::create(db, gateway, user, Some(agent_id), text)
+        .await
+        .expect("create agent-scoped memory record");
+}
+
+/// Insert an agent owned by `user` and return its id (no semantic profile).
+async fn make_agent(db: &PgPool, user: &str) -> Uuid {
+    ensure_user(db, user).await;
+    agents_repo::insert(
+        db,
+        user,
+        &AgentInput {
+            name: format!("Agent {}", nonce()),
+            preamble: None,
+            system_prompt: "Do the thing.".to_string(),
+            provider: "openai".to_string(),
+            model: "gpt-4o".to_string(),
+            recent_n: 10,
+            top_k: 5,
+        },
+    )
+    .await
+    .expect("insert agent")
+    .id
+}
+
+/// Insert an agent and pin it a semantic profile with the given memory scope.
+async fn agent_with_scope(
+    db: &PgPool,
+    gateway: &GatewayClient,
+    user: &str,
+    model: &str,
+    scope: &str,
+) -> Uuid {
+    let agent_id = make_agent(db, user).await;
+    settings::set_semantic_profile(
+        db,
+        gateway,
+        user,
+        agent_id,
+        &SemanticProfileInput {
+            embedding_model: model.to_string(),
+            memory_scope: scope.to_string(),
+        },
+    )
+    .await
+    .expect("set semantic profile");
+    agent_id
 }
 
 // --- Tests ---
@@ -193,6 +269,7 @@ async fn topk_zero_disables_retrieval() {
         return;
     };
     let user = fresh_user("zero");
+    ensure_user(&db, &user).await;
     settings::set_embedding_model(&db, &gateway, &user, MODEL_A)
         .await
         .unwrap();
@@ -233,6 +310,7 @@ async fn embedding_failure_skips_not_errors() {
         return;
     };
     let user = fresh_user("embedfail");
+    ensure_user(&db, &user).await;
     // /model/info still works in the fail proxy, so the global model can be set.
     settings::set_embedding_model(&db, &gateway, &user, MODEL_A)
         .await
@@ -319,6 +397,71 @@ async fn uses_agent_profile_model_over_global() {
 }
 
 #[tokio::test]
+async fn own_scope_returns_only_the_agents_records() {
+    let Some((db, gateway, _)) = setup(false).await else {
+        eprintln!("SKIP: no db/redis; own_scope_returns_only_the_agents_records skipped");
+        return;
+    };
+    let user = fresh_user("ownscope");
+    ensure_user(&db, &user).await;
+    settings::set_embedding_model(&db, &gateway, &user, MODEL_A)
+        .await
+        .unwrap();
+    let agent = agent_with_scope(&db, &gateway, &user, MODEL_A, "own").await;
+
+    // Same model space, same query vector: only the agent-tagged record should
+    // come back under "own" — the global (untagged) one is excluded.
+    seed_for_agent(&db, &gateway, &user, MODEL_A, agent, "vec:1,0,0").await;
+    seed(&db, &gateway, &user, MODEL_A, "vec:1,0,0").await; // global, identical vector
+
+    let outcome = retrieval::retrieve(&db, &gateway, &user, agent, 10, "vec:1,0,0").await;
+
+    assert_eq!(outcome.status, RetrievalStatus::Ok);
+    assert_eq!(outcome.records.len(), 1); // only the agent's own record
+    assert_eq!(outcome.excluded_mismatched, 0);
+}
+
+#[tokio::test]
+async fn own_scope_with_no_agent_records_returns_empty() {
+    let Some((db, gateway, _)) = setup(false).await else {
+        eprintln!("SKIP: no db/redis; own_scope_with_no_agent_records_returns_empty skipped");
+        return;
+    };
+    let user = fresh_user("ownempty");
+    ensure_user(&db, &user).await;
+    settings::set_embedding_model(&db, &gateway, &user, MODEL_A)
+        .await
+        .unwrap();
+    let agent = agent_with_scope(&db, &gateway, &user, MODEL_A, "own").await;
+
+    // A global record exists, but the agent has none of its own.
+    seed(&db, &gateway, &user, MODEL_A, "vec:1,0,0").await;
+
+    let outcome = retrieval::retrieve(&db, &gateway, &user, agent, 10, "vec:1,0,0").await;
+
+    assert_eq!(outcome.status, RetrievalStatus::Ok);
+    assert!(outcome.records.is_empty());
+}
+
+#[tokio::test]
+async fn all_scope_includes_agent_tagged_records() {
+    let Some((db, gateway, _)) = setup(false).await else {
+        eprintln!("SKIP: no db/redis; all_scope_includes_agent_tagged_records skipped");
+        return;
+    };
+    let user = fresh_user("allscope");
+    let agent = make_agent(&db, &user).await;
+    // Tag a record to the agent; retrieve with the default "all" scope (no
+    // profile → global model, scope "all") and it must still be visible.
+    seed_for_agent(&db, &gateway, &user, MODEL_A, agent, "vec:1,0,0").await;
+
+    let outcome = retrieval::retrieve(&db, &gateway, &user, Uuid::nil(), 10, "vec:1,0,0").await;
+
+    assert_eq!(outcome.status, RetrievalStatus::Ok);
+    assert_eq!(outcome.records.len(), 1); // "all" sees agent-tagged records too
+}
+
+#[tokio::test]
 async fn scoped_to_owner() {
     let Some((db, gateway, _)) = setup(false).await else {
         eprintln!("SKIP: no db/redis; scoped_to_owner skipped");
@@ -328,6 +471,7 @@ async fn scoped_to_owner() {
     let other = fresh_user("other");
     seed(&db, &gateway, &owner, MODEL_A, "vec:1,0,0").await;
     // The other user has the same model but no records of their own.
+    ensure_user(&db, &other).await;
     settings::set_embedding_model(&db, &gateway, &other, MODEL_A)
         .await
         .unwrap();

@@ -54,10 +54,26 @@ describe("memory mutations", () => {
     const { Wrapper, invalidateSpy } = makeWrapper();
 
     const { result } = renderHook(() => useCreateMemoryRecord(), { wrapper: Wrapper });
-    await result.current.mutateAsync("remember this");
+    await result.current.mutateAsync({ text: "remember this", agentId: null });
 
-    expect(mockedApiPost).toHaveBeenCalledWith("/memory", { text: "remember this" });
+    expect(mockedApiPost).toHaveBeenCalledWith("/memory", {
+      text: "remember this",
+      agent_id: null,
+    });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["memory"] });
+  });
+
+  it("POSTs the agent scope when the record is scoped to an agent", async () => {
+    mockedApiPost.mockResolvedValue({ id: "r1" });
+    const { Wrapper } = makeWrapper();
+
+    const { result } = renderHook(() => useCreateMemoryRecord(), { wrapper: Wrapper });
+    await result.current.mutateAsync({ text: "agent note", agentId: "agent-7" });
+
+    expect(mockedApiPost).toHaveBeenCalledWith("/memory", {
+      text: "agent note",
+      agent_id: "agent-7",
+    });
   });
 
   it("PUTs to the record path and invalidates memory", async () => {
@@ -65,9 +81,9 @@ describe("memory mutations", () => {
     const { Wrapper, invalidateSpy } = makeWrapper();
 
     const { result } = renderHook(() => useUpdateMemoryRecord(), { wrapper: Wrapper });
-    await result.current.mutateAsync({ id: "r1", text: "new text" });
+    await result.current.mutateAsync({ id: "r1", text: "new text", agentId: null });
 
-    expect(mockedApiPut).toHaveBeenCalledWith("/memory/r1", { text: "new text" });
+    expect(mockedApiPut).toHaveBeenCalledWith("/memory/r1", { text: "new text", agent_id: null });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["memory"] });
   });
 
