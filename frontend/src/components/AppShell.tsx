@@ -1,7 +1,8 @@
+import { Suspense } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 
 import { NavBar } from "./NavBar";
-import { ToastProvider } from "./ui";
+import { Spinner, ToastProvider } from "./ui";
 import styles from "./AppShell.module.css";
 
 /** Persistent layout: a sticky top bar with brand + navigation, and a routed
@@ -42,7 +43,10 @@ export function AppShell() {
           id="main"
           className={[styles.main, flush && styles.mainFlush].filter(Boolean).join(" ")}
         >
-          <Outlet />
+          {/* Pages are route-split (React.lazy); show a spinner while a chunk loads. */}
+          <Suspense fallback={<Spinner label="Loading…" />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </ToastProvider>
