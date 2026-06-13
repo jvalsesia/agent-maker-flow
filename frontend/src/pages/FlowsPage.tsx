@@ -91,6 +91,8 @@ export function FlowsPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<{ run: () => void } | null>(null);
+  // Monitor drawer (open state only matters below the three-pane width).
+  const [monitorOpen, setMonitorOpen] = useState(false);
 
   // F10 run state: the current prompt, the active run id, and the session turns.
   const [prompt, setPrompt] = useState("");
@@ -180,6 +182,16 @@ export function FlowsPage() {
       }
     },
     [flow, showToast],
+  );
+
+  /** Keyboard fallback for palette drag-and-drop: drop the agent at a cascading
+   *  default position so it never lands exactly on the previous node (spec §7). */
+  const handleAddToCanvas = useCallback(
+    (agentId: string) => {
+      const n = flow.nodes.length;
+      flow.addAgentNode(agentId, { x: 80 + (n % 5) * 48, y: 80 + (n % 5) * 48 });
+    },
+    [flow],
   );
 
   /** Replace the canvas with a saved flow, fetching its full graph on demand. */
@@ -318,6 +330,9 @@ export function FlowsPage() {
 
   return (
     <section className={styles.page} aria-label="Flows workspace">
+      <a className="skip-link" href="#flow-monitor">
+        Skip to monitor
+      </a>
       <div className={styles.toolbar} role="toolbar" aria-label="Flow file actions">
         <div className={styles.toolbarLeft}>
           <h2 className={styles.heading}>Flows</h2>
@@ -343,6 +358,17 @@ export function FlowsPage() {
           <Button variant="secondary" size="sm" onClick={handleSaveAs}>
             Save as
           </Button>
+          <span className={styles.monitorToggle}>
+            <Button
+              variant="secondary"
+              size="sm"
+              aria-expanded={monitorOpen}
+              aria-controls="flow-monitor"
+              onClick={() => setMonitorOpen((open) => !open)}
+            >
+              Monitor
+            </Button>
+          </span>
         </div>
       </div>
 
@@ -360,7 +386,7 @@ export function FlowsPage() {
       <div className={styles.workspace}>
         <aside className={styles.left} aria-label="Saved flows">
           <Card title="Agents palette" className={styles.paletteCard} bodyClassName={styles.scrollBody}>
-            <AgentPalette />
+            <AgentPalette onAddToCanvas={handleAddToCanvas} />
           </Card>
           <Card title="Saved flows" className={styles.flowsCard} bodyClassName={styles.scrollBody}>
             <SavedFlowsList
@@ -381,6 +407,10 @@ export function FlowsPage() {
 
         <ReactFlowProvider>
           <div className={styles.center}>
+            <p className={styles.mobileNotice} role="note">
+              Flow editing works best on a larger screen. Drag-and-drop is desktop-first; use a
+              wider viewport to build flows.
+            </p>
             <div className={styles.canvasWrap}>
               <div className={styles.runOverlay}>
                 <FlowToolbar
@@ -405,7 +435,19 @@ export function FlowsPage() {
           </div>
         </ReactFlowProvider>
 
-        <aside className={styles.right} aria-label="Conversation monitor panel">
+        {monitorOpen && (
+          <div
+            className={styles.scrim}
+            aria-hidden="true"
+            onClick={() => setMonitorOpen(false)}
+          />
+        )}
+        <aside
+          id="flow-monitor"
+          tabIndex={-1}
+          className={[styles.right, monitorOpen && styles.drawerOpen].filter(Boolean).join(" ")}
+          aria-label="Conversation monitor panel"
+        >
           <Card className={styles.monitorCard}>
             <ConversationMonitor
               turns={turns}

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 
 import { useAgents } from "../../lib/agents";
-import { Alert, Badge, Input, SkeletonRows } from "../ui";
+import { Alert, Badge, Button, Input, SkeletonRows } from "../ui";
 import styles from "./AgentPalette.module.css";
 
 /** DataTransfer MIME type carrying the dragged agent's id onto the canvas. */
@@ -10,13 +10,19 @@ export const AGENT_DRAG_MIME = "application/x-agent-id";
 /** Above this many agents, show a search filter to keep the palette scannable. */
 const SEARCH_THRESHOLD = 8;
 
+interface AgentPaletteProps {
+  /** Keyboard fallback for the mouse-only drag-and-drop: adds the agent to the
+   *  canvas at a default position (spec §7 canvas a11y). */
+  onAddToCanvas?: (agentId: string) => void;
+}
+
 /**
  * The agent palette (F07): the caller's F04 registry agents rendered as
  * draggable items. Each item carries its agent id via DataTransfer so the
  * canvas can instantiate a node referencing that agent on drop. This realizes
  * the cross-feature criterion that registry profiles appear as draggable nodes.
  */
-export function AgentPalette() {
+export function AgentPalette({ onAddToCanvas }: AgentPaletteProps = {}) {
   const { data: agents, isLoading, isError } = useAgents();
   const [query, setQuery] = useState("");
 
@@ -76,7 +82,21 @@ export function AgentPalette() {
                   {agent.provider}
                 </Badge>
               </div>
-              <span className={styles.model}>{agent.model}</span>
+              <div className={styles.itemFoot}>
+                <span className={styles.model}>{agent.model}</span>
+                {onAddToCanvas && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={styles.add}
+                    aria-label={`Add ${agent.name} to canvas`}
+                    title="Add to canvas"
+                    onClick={() => onAddToCanvas(agent.id)}
+                  >
+                    + Add
+                  </Button>
+                )}
+              </div>
             </li>
           ))}
         </ul>

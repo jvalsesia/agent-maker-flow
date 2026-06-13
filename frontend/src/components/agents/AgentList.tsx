@@ -62,7 +62,7 @@ export function AgentList({ agents, onEdit, onDuplicate, onDelete, onCreate }: A
   }
 
   return (
-    <Card bodyPadded={false}>
+    <Card bodyPadded={false} bodyClassName={styles.tableWrap}>
       <table className={styles.table}>
         <thead className={styles.head}>
           <tr>
