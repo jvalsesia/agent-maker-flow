@@ -7,6 +7,7 @@ import {
   useEmbeddingSetting,
   useSetEmbeddingSetting,
 } from "../lib/embeddingSettings";
+import { useAgents } from "../lib/agents";
 import { useDeleteMemoryRecord, useMemoryRecords, type MemoryRecord } from "../lib/memory";
 import { useModels, useProviders } from "../lib/models";
 import { Alert, Card, Select, SkeletonRows } from "../components/ui";
@@ -26,8 +27,14 @@ export function SettingsPage() {
   const setEmbedding = useSetEmbeddingSetting();
 
   const memory = useMemoryRecords();
+  const agents = useAgents();
   const deleteRecord = useDeleteMemoryRecord();
   const [editing, setEditing] = useState<MemoryRecord | null>(null);
+
+  // Agent id → name, so the records list can label agent-scoped records (F06).
+  const agentNames = Object.fromEntries(
+    (agents.data ?? []).map((agent) => [agent.id, agent.name]),
+  );
 
   // Default the provider picker to the first discovered provider.
   useEffect(() => {
@@ -99,6 +106,7 @@ export function SettingsPage() {
             {memory.data && (
               <MemoryRecordList
                 records={memory.data.records}
+                agentNames={agentNames}
                 onEdit={(record) => setEditing(record)}
                 onDelete={(record) => deleteRecord.mutate(record.id)}
               />

@@ -10,9 +10,18 @@ export interface MemoryRecord {
   id: string;
   text: string;
   embedding_model: string;
+  /** The agent this record is scoped to, or null for a global record (F06). */
+  agent_id: string | null;
   char_count: number;
   created_at: string;
   updated_at: string;
+}
+
+/** Fields a memory record write accepts: the text plus an optional agent scope. */
+export interface MemoryRecordInput {
+  text: string;
+  /** Scope the record to one agent (memory_scope="own"), or null for global. */
+  agentId: string | null;
 }
 
 interface MemoryListResponse {
@@ -34,7 +43,8 @@ export function useMemoryRecords() {
 export function useCreateMemoryRecord() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (text: string) => apiPost<MemoryRecord>("/memory", { text }),
+    mutationFn: ({ text, agentId }: MemoryRecordInput) =>
+      apiPost<MemoryRecord>("/memory", { text, agent_id: agentId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: memoryKey }),
   });
 }
@@ -43,8 +53,8 @@ export function useCreateMemoryRecord() {
 export function useUpdateMemoryRecord() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, text }: { id: string; text: string }) =>
-      apiPut<MemoryRecord>(`/memory/${id}`, { text }),
+    mutationFn: ({ id, text, agentId }: MemoryRecordInput & { id: string }) =>
+      apiPut<MemoryRecord>(`/memory/${id}`, { text, agent_id: agentId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: memoryKey }),
   });
 }
