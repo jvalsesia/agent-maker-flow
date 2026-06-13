@@ -49,3 +49,27 @@
   align-items: center;
   gap: var(--space-3);
 }
+
+/* Mobile: the segmented nav detaches into a fixed bottom tab bar (spec §8). */
+@media (max-width: 767px) {
+  .segments {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    border-radius: 0;
+    border-top: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    padding: var(--space-1) var(--space-2);
+    gap: var(--space-1);
+    justify-content: space-around;
+    box-shadow: 0 -1px 2px rgba(16, 22, 30, 0.06);
+  }
+
+  .link {
+    flex: 1;
+    justify-content: center;
+    height: 44px;
+  }
+}

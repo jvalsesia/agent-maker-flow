@@ -84,6 +84,15 @@
 
   /* Fixed chrome metrics referenced by layout (shell topbar, etc.) */
   --topbar-height: 56px;
+  /* Bottom tab bar only exists on mobile; 0 elsewhere so layout math is shared. */
+  --bottomnav-height: 0px;
+}
+
+/* On mobile the primary nav becomes a bottom tab bar (spec §4, §8). */
+@media (max-width: 767px) {
+  :root {
+    --bottomnav-height: 56px;
+  }
 }
 
 [data-theme="dark"] {

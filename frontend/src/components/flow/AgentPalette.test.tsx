@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import type { Agent } from "../../lib/agents";
 
@@ -75,5 +76,20 @@ describe("AgentPalette (cross-feature: F04 registry → draggable nodes)", () =>
     useAgentsMock.mockReturnValue({ data: [], isLoading: false, isError: false });
     render(<AgentPalette />);
     expect(screen.getByText("No agents yet. Create one on the Agents dashboard.")).toBeInTheDocument();
+  });
+
+  it("offers a keyboard 'Add to canvas' fallback when onAddToCanvas is provided", async () => {
+    useAgentsMock.mockReturnValue({ data: sampleAgents, isLoading: false, isError: false });
+    const onAddToCanvas = vi.fn();
+    render(<AgentPalette onAddToCanvas={onAddToCanvas} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Add Summarizer to canvas" }));
+    expect(onAddToCanvas).toHaveBeenCalledWith("agent-1");
+  });
+
+  it("omits the add button when no onAddToCanvas handler is given", () => {
+    useAgentsMock.mockReturnValue({ data: sampleAgents, isLoading: false, isError: false });
+    render(<AgentPalette />);
+    expect(screen.queryByRole("button", { name: /Add .* to canvas/ })).not.toBeInTheDocument();
   });
 });

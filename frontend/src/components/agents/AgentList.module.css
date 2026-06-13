@@ -1,7 +1,12 @@
+.tableWrap {
+  overflow-x: auto;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
   font-size: var(--text-sm-size);
+  min-width: 520px;
 }
 
 .head th {

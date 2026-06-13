@@ -1,7 +1,7 @@
 .page {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--topbar-height));
+  height: calc(100vh - var(--topbar-height) - var(--bottomnav-height));
   min-height: 0;
 }
 
@@ -149,8 +149,81 @@
   height: 100%;
 }
 
+/* Toggle that opens the monitor drawer — only relevant below the 3-pane width. */
+.monitorToggle {
+  display: none;
+}
+
+.mobileNotice {
+  display: none;
+}
+
+/* Tablet: the monitor collapses into an off-canvas drawer (spec §8). */
 @media (max-width: 1279px) {
+  .monitorToggle {
+    display: inline-flex;
+  }
+
   .right {
-    width: 300px;
+    position: fixed;
+    top: var(--topbar-height);
+    right: 0;
+    bottom: var(--bottomnav-height);
+    width: min(360px, 92vw);
+    padding: var(--space-3);
+    background: var(--bg-base);
+    border-left: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-lg);
+    transform: translateX(100%);
+    transition: transform var(--dur-base) var(--ease);
+    z-index: 60;
+  }
+
+  .drawerOpen {
+    transform: translateX(0);
+  }
+
+  .scrim {
+    position: fixed;
+    inset: var(--topbar-height) 0 var(--bottomnav-height) 0;
+    background: var(--scrim);
+    z-index: 55;
+    border: none;
+  }
+}
+
+/* Mobile: panes stack, the canvas shows a desktop-first notice (spec §8). */
+@media (max-width: 767px) {
+  .workspace {
+    flex-direction: column;
+    padding: var(--space-3);
+    gap: var(--space-3);
+    overflow-y: auto;
+  }
+
+  .left {
+    width: 100%;
+    flex: none;
+  }
+
+  .paletteCard {
+    flex: none;
+    max-height: 320px;
+  }
+
+  .center {
+    min-height: 420px;
+  }
+
+  .mobileNotice {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-caption-size);
+    color: var(--text-secondary);
+    background: var(--warning-subtle);
+    border-radius: var(--radius-md);
   }
 }

@@ -63,7 +63,7 @@ export function ConversationMonitor({
         <ConversationTurns turns={turns} />
 
         {nodes.length > 0 && (
-          <div className={styles.nodes} aria-label="Agent blocks">
+          <div className={styles.nodes} aria-label="Agent blocks" aria-live="polite">
             <span className={styles.nodesLabel}>Live nodes</span>
             {nodes.map((node) => (
               <NodeBlock key={node.nodeId} node={node} />

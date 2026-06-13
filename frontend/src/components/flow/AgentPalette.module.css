@@ -67,10 +67,39 @@
   white-space: nowrap;
 }
 
+.itemFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
 .model {
   font-family: var(--font-mono);
   font-size: var(--text-sm-size);
   color: var(--text-secondary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The keyboard "Add" affordance is subtle until the item is hovered/focused. */
+.add {
+  flex: none;
+  opacity: 0;
+}
+
+.item:hover .add,
+.item:focus-within .add,
+.add:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .add {
+    opacity: 1;
+  }
 }
 
 .empty {

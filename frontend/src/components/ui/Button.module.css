@@ -51,6 +51,17 @@
   width: 100%;
 }
 
+/* Honor a ≥44px touch target on touch devices, even for the sm size (spec §7). */
+@media (pointer: coarse) {
+  .sm {
+    min-height: 44px;
+  }
+
+  .iconOnly.sm {
+    width: 44px;
+  }
+}
+
 /* Variants */
 .primary {
   background: var(--accent);
