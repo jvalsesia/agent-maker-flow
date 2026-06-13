@@ -36,12 +36,13 @@ function renderApp(initialEntries: string[]) {
 }
 
 describe("AppShell", () => {
-  it("renders navigation and defaults to the agents route", () => {
+  it("renders navigation and defaults to the agents route", async () => {
     renderApp(["/"]);
 
     expect(screen.getByRole("link", { name: "Agents" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Flows" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Agents" })).toBeInTheDocument();
+    // Pages are route-split (React.lazy), so the heading resolves asynchronously.
+    expect(await screen.findByRole("heading", { name: "Agents" })).toBeInTheDocument();
   });
 
   it("navigates between routes without a full reload", async () => {
@@ -49,9 +50,9 @@ describe("AppShell", () => {
     renderApp(["/agents"]);
 
     await user.click(screen.getByRole("link", { name: "Flows" }));
-    expect(screen.getByRole("heading", { name: "Flows" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Flows" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("link", { name: "Agents" }));
-    expect(screen.getByRole("heading", { name: "Agents" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Agents" })).toBeInTheDocument();
   });
 });
