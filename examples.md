@@ -96,6 +96,10 @@ Responda SOMENTE com um objeto JSON com esta forma:
 }
 ```
 
+**Memória recomendada:** Memória 8 — Política de Privacidade e PII (para saber o que
+mascarar/minimizar já na limpeza). Útil também: Memória 1 — ICP (para reconhecer e
+normalizar campos de empresa/cargo que importam à qualificação).
+
 ---
 
 ### 1.2 — Anonimizador de PII
@@ -147,6 +151,10 @@ Responda com:
 }
 Inclua no "mapa_marcadores" apenas o tipo, nunca o valor original.
 ```
+
+**Memória recomendada:** Memória 8 — Política de Privacidade e PII (define o que é PII
+sensível, o que mascarar antes de qualquer LLM e a base legal LGPD). É a memória central
+deste agente.
 
 ---
 
@@ -208,6 +216,11 @@ Responda com:
 }
 ```
 
+**Memórias recomendadas:** Memória 1 — ICP, Memória 2 — Definição de MQL e SQL e
+Memória 3 — Faixas de Lead Score. Juntas dão o critério de fit, a régua de estágio
+(BANT) e a pontuação 0–100 que este agente precisa para classificar de forma
+reproduzível.
+
 ---
 
 ### 2.2 — Roteador de Lead por Segmento
@@ -259,6 +272,10 @@ Responda com:
   "necessita_revisao_humana": false
 }
 ```
+
+**Memória recomendada:** Memória 4 — Regras de Roteamento por Segmento (time de destino,
+SLA e canal por porte/idioma/parceria). Útil também: Memória 3 — Faixas de Lead Score
+(o SLA muitas vezes deriva da faixa de pontuação).
 
 ---
 
@@ -321,6 +338,11 @@ Responda com:
 }
 ```
 
+**Memórias recomendadas:** Memória 5 — Catálogo de Objeções e Respostas (para mapear as
+objeções prováveis e como tratá-las) e Memória 6 — Tom de Voz e Diretrizes de Abordagem
+(para o tom e a mensagem sugerida). Útil também: Memória 7 — Glossário de Sinais de
+Compra (para ancorar a leitura de intenção/urgência).
+
 ---
 
 ### 3.2 — Detector de Sinais de Compra
@@ -375,6 +397,11 @@ Responda com:
   "justificativa": ""
 }
 ```
+
+**Memória recomendada:** Memória 7 — Glossário de Sinais de Compra (taxonomia de sinais
+fortes/médios/fracos e de risco, mais a regra de prontidão alta). É a memória central
+deste agente. Útil também: Memória 5 — Catálogo de Objeções (para reconhecer objeções
+não resolvidas como sinal de risco).
 
 ---
 
@@ -433,6 +460,11 @@ resposta concisa — idealmente abaixo de 250 palavras, salvo se a complexidade 
 lead exigir mais.
 ```
 
+**Memória recomendada:** Memória 6 — Tom de Voz e Diretrizes de Abordagem (para a
+mensagem de abordagem sugerida sair no tom certo) e Memória 8 — Política de Privacidade
+e PII (para não reexpor dados que chegaram mascarados). Em geral consolida o que os nós
+a montante já recuperaram, então não precisa de muita memória própria.
+
 ---
 
 ## 5. Exemplos de Memória (RAG)
@@ -440,6 +472,25 @@ lead exigir mais.
 Cada bloco abaixo é uma **memória independente**. Cole um por registro no painel
 de memória; cada um será embeddado e recuperado por similaridade quando o prompt
 de um nó for relevante.
+
+### Qual memória para qual agente
+
+Mapa de cada agente às memórias mais adequadas para recuperação (RAG). A coluna
+**central** é a memória que define a tarefa do agente; **apoio** complementa.
+
+| Agente | Memória central | Memórias de apoio |
+|--------|-----------------|-------------------|
+| Higienizador de Lead | 8 — Privacidade e PII | 1 — ICP |
+| Anonimizador de PII | 8 — Privacidade e PII | — |
+| Classificador de Lead | 2 — MQL/SQL · 3 — Lead Score | 1 — ICP |
+| Roteador de Lead por Segmento | 4 — Roteamento | 3 — Lead Score |
+| Analista de Comportamento do Lead | 5 — Objeções · 6 — Tom de Voz | 7 — Sinais de Compra |
+| Detector de Sinais de Compra | 7 — Sinais de Compra | 5 — Objeções |
+| Sintetizador de Resposta | 6 — Tom de Voz | 8 — Privacidade e PII |
+
+> Memória 1 (ICP) é transversal: ajuda o Higienizador a reconhecer campos, o
+> Classificador a medir fit e o Roteador a confirmar segmento. Carregue-a sempre que o
+> agente precise julgar "isso é um cliente nosso?".
 
 ### Memória 1 — Perfil de Cliente Ideal (ICP)
 ```
@@ -655,4 +706,148 @@ queria saber sobre o sistema
 [áudio não transcrito]
 👍👍
 manda info
+```
+
+---
+
+## 7. Pipelines Recomendados por Lead
+
+Para cada lead da seção 6, abaixo está o conjunto de agentes mais adequado para
+ligar no canvas (F02). A regra geral: o **Higienizador de Lead** é sempre a raiz
+(**Root Agent**) e o **Sintetizador de Resposta** é sempre o nó terminal — o que
+varia no meio é quais agentes de classificação/análise fazem sentido para o que
+cada lead exercita.
+
+Os três agentes **sempre presentes** são Higienizador, Classificador e
+Sintetizador. Anonimizador de PII, Roteador, Detector de Sinais e Analista de
+Comportamento entram conforme o que cada lead exige.
+
+| Lead | Anonimizador PII | Roteador | Detector Sinais | Analista Comport. | Observação |
+|------|:---:|:---:|:---:|:---:|---|
+| 1 — Enterprise quente | — | ✅ | ✅ | ✅ | pipeline completo |
+| 2 — Mid-Market morno | — | ✅ | — | ✅ | sem buying signals |
+| 3 — MEI desconto | — | opc. | — | ✅ | curto, foco classificação |
+| 4 — Fintech + PII | ✅ **obrig.** | — | ✅ | ✅ | Anonimizador é o 2º nó |
+| 5 — Alemão/LATAM | — | ✅ **chave** | opc. | ✅ | roteamento por idioma |
+| 6 — Parceria | — | ✅ **chave** | — | — | regra independe do porte |
+| 7 — Ruído | — | — | — | — | só Higienizador + Sintetizador |
+
+---
+
+### Lead 1 — Enterprise quente (SQL / alta)
+
+Lead completo e "quente": budget aprovado, prazo, comparando concorrentes,
+pedindo proposta. Vale rodar o pipeline inteiro **incluindo o Detector de Sinais
+de Compra**, porque há vários buying signals fortes a evidenciar. Sem PII
+sensível (CNPJ/telefone são contato comercial legítimo), então não precisa do
+Anonimizador.
+
+```
+Higienizador de Lead (root)
+   └─> Classificador de Lead
+          ├─> Roteador de Lead por Segmento        (→ Field Sales, SLA 1h, Enterprise >500)
+          └─> Detector de Sinais de Compra         (proposta + budget + prazo + concorrência)
+                 └─> Analista de Comportamento do Lead
+                        └─> Sintetizador de Resposta
+```
+
+---
+
+### Lead 2 — Mid-Market morno (MQL / média)
+
+Baixou ebook, "ainda não sei se faz sentido agora", "sem pressa". Testa a
+distinção MQL vs SQL. Não há sinal de compra → **Detector de Sinais de Compra é
+dispensável** (retornaria vazio). E-mail gratuito (gmail) em contexto B2B é
+penalidade no score, coberta pelo Classificador.
+
+```
+Higienizador de Lead (root)
+   └─> Classificador de Lead                        (→ MQL, fit ICP médio, sem timing)
+          └─> Roteador de Lead por Segmento         (→ Inside Sales / Nutrição, e-mail médio)
+                 └─> Analista de Comportamento do Lead   (intenção "pesquisando")
+                        └─> Sintetizador de Resposta
+```
+
+---
+
+### Lead 3 — Caçador de desconto / MEI (Descartar / Nutrir)
+
+Fora de ICP (MEI, sem grana), foco exclusivo em preço. Pipeline curto: a decisão
+é de **classificação**, não de comportamento de compra. Pode-se até omitir o
+Roteador (provável "Nutrição de Marketing, sem SLA"). Anonimizador e Detector
+não se aplicam.
+
+```
+Higienizador de Lead (root)
+   └─> Classificador de Lead                        (→ Descartar/Nutrir, fora de ICP, −desconto)
+          └─> Analista de Comportamento do Lead     (intenção "só preço", objeção preço)
+                 └─> Sintetizador de Resposta
+```
+
+---
+
+### Lead 4 — Fintech com PII sensível (SQL) ⭐
+
+Caso que **obriga o Anonimizador de PII** — CPF, número de cartão e condição de
+saúde precisam ser mascarados *antes* de qualquer outro processamento (Memória 8
+/ LGPD). O Anonimizador é inserido como **segundo nó**, entre Higienizador e
+Classificador, para que nenhum agente a jusante veja PII bruta. Também há sinal
+de compra forte (urgência + CFO + budget liberado).
+
+```
+Higienizador de Lead (root)
+   └─> Anonimizador de PII                          ← OBRIGATÓRIO (CPF, cartão, dado de saúde)
+          └─> Classificador de Lead
+                 └─> Detector de Sinais de Compra   (urgência + decisor + budget = prontidão alta)
+                        └─> Analista de Comportamento do Lead
+                               └─> Sintetizador de Resposta   (mantém PII mascarada)
+```
+
+---
+
+### Lead 5 — Lead internacional alemão (rota Time Global)
+
+Testa **roteamento por idioma**. O Classificador qualifica (Enterprise ~450
+func., pilot Q3) e o **Roteador** é o agente-chave (regra: idioma ≠ português →
+time global). O Higienizador deve preservar o idioma original. Sem PII sensível;
+sinal de compra é médio (pilot), então o Detector é opcional.
+
+```
+Higienizador de Lead (root)
+   └─> Classificador de Lead                        (fit ICP alto, timing Q3)
+          └─> Roteador de Lead por Segmento         ← agente-chave (→ Time Global, EN onboarding)
+                 └─> Analista de Comportamento do Lead
+                        └─> Sintetizador de Resposta
+```
+
+---
+
+### Lead 6 — Pedido de parceria/revenda (rota Parcerias)
+
+Testa a regra de roteamento que **independe do porte** (consultoria de 12
+pessoas → Parcerias, não Descartar por ser pequena). O **Roteador** carrega a
+decisão. Pode-se pular o Analista de Comportamento — a intenção é explícita
+(revenda), não há ambiguidade comportamental a inferir.
+
+```
+Higienizador de Lead (root)
+   └─> Classificador de Lead                        (marca como "Parcerias", não MQL/SQL)
+          └─> Roteador de Lead por Segmento         ← agente-chave (→ time de Parcerias)
+                 └─> Sintetizador de Resposta
+```
+
+---
+
+### Lead 7 — Ruído quase puro (robustez)
+
+Emojis, "oi", áudio não transcrito. Testa só a **robustez do Higienizador**. Não
+há dado suficiente para classificar de verdade. O valor está em validar que o
+Higienizador marca tudo como `"desconhecido"`/`campos_ausentes` sem inventar, e
+que o Sintetizador honra a regra de "se faltou dado, diga o que falta". Análise
+comportamental e detecção de sinais seriam ruído sobre ruído.
+
+```
+Higienizador de Lead (root)
+   └─> Classificador de Lead                        (→ "indeterminado", muitos campos_ausentes)
+          └─> Sintetizador de Resposta              (relata lacunas, pede mais info)
 ```
