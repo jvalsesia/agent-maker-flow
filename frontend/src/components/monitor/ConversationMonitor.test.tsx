@@ -110,6 +110,30 @@ describe("ConversationMonitor", () => {
     );
   });
 
+  it("renders the assistant response after the live nodes", () => {
+    const turns: ConversationTurn[] = [
+      { id: "user-1", role: "user", content: "Summarize" },
+      { id: "assistant-1", role: "assistant", content: "Here is the summary." },
+    ];
+    render(
+      <ConversationMonitor
+        {...baseProps({ turns, nodes: [node({ status: "complete", output: "done" })] })}
+      />,
+    );
+
+    const nodesLabel = screen.getByText("Live nodes");
+    const assistant = screen.getByText("Here is the summary.");
+    const prompt = screen.getByText("Summarize");
+
+    // Order in the scroll region: prompt -> live nodes -> assistant response.
+    expect(prompt.compareDocumentPosition(nodesLabel)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(nodesLabel.compareDocumentPosition(assistant)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
   it("shows the reconnecting indicator while an active run is re-establishing", () => {
     render(<ConversationMonitor {...baseProps({ isRunning: true, connection: "connecting" })} />);
     expect(screen.getByText("Reconnecting…")).toBeInTheDocument();

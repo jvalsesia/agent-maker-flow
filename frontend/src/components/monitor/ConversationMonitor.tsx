@@ -38,6 +38,20 @@ export function ConversationMonitor({
 }: ConversationMonitorProps) {
   const reconnecting = isRunning && connection === "connecting";
 
+  // The live nodes belong to the most recent run, so they slot between the
+  // latest user prompt and the assistant response that follows it. Split the
+  // turns at the last user message: history + prompt render above the nodes,
+  // the response (and any post-prompt system notices) render below them.
+  let lastUserIdx = -1;
+  for (let i = turns.length - 1; i >= 0; i--) {
+    if (turns[i].role === "user") {
+      lastUserIdx = i;
+      break;
+    }
+  }
+  const headTurns = lastUserIdx >= 0 ? turns.slice(0, lastUserIdx + 1) : turns;
+  const tailTurns = lastUserIdx >= 0 ? turns.slice(lastUserIdx + 1) : [];
+
   return (
     <section className={styles.monitor} aria-label="Conversation monitor">
       <div className={styles.header}>
@@ -60,15 +74,24 @@ export function ConversationMonitor({
       )}
 
       <div className={styles.scroll}>
-        <ConversationTurns turns={turns} />
+        {turns.length === 0 && nodes.length === 0 ? (
+          // Empty state (no run yet): let ConversationTurns show its placeholder.
+          <ConversationTurns turns={turns} />
+        ) : (
+          <>
+            {headTurns.length > 0 && <ConversationTurns turns={headTurns} />}
 
-        {nodes.length > 0 && (
-          <div className={styles.nodes} aria-label="Agent blocks" aria-live="polite">
-            <span className={styles.nodesLabel}>Live nodes</span>
-            {nodes.map((node) => (
-              <NodeBlock key={node.nodeId} node={node} />
-            ))}
-          </div>
+            {nodes.length > 0 && (
+              <div className={styles.nodes} aria-label="Agent blocks" aria-live="polite">
+                <span className={styles.nodesLabel}>Live nodes</span>
+                {nodes.map((node) => (
+                  <NodeBlock key={node.nodeId} node={node} />
+                ))}
+              </div>
+            )}
+
+            {tailTurns.length > 0 && <ConversationTurns turns={tailTurns} />}
+          </>
         )}
       </div>
 
