@@ -82,6 +82,11 @@ services:
         # Vite inlines VITE_* at build time; the Clerk publishable key is public.
         VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:?set VITE_CLERK_PUBLISHABLE_KEY in .env}
     container_name: amf-frontend
+    environment:
+      # Backend origin nginx proxies /api/ to. In-network service name by
+      # default; override for an external API. Templated into nginx.conf at
+      # container start via the image's envsubst step.
+      BACKEND_URL: ${BACKEND_URL:-http://backend:8080}
     ports:
       - "8081:80"
     depends_on:

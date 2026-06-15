@@ -25,10 +25,16 @@ RUN npm run build
 # ---- Runtime stage -------------------------------------------------------
 FROM nginx:1.27-alpine AS runtime
 
-# SPA history-fallback config (React Router v6 needs all routes -> index.html).
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Backend origin nginx proxies /api/ to. The nginx image's entrypoint runs
+# envsubst over /etc/nginx/templates/*.template at start, so this is overridable
+# at runtime (e.g. `BACKEND_URL` in docker-compose) without rebuilding.
+ENV BACKEND_URL=http://backend:8080
+
+# SPA history-fallback + API proxy config, templated with ${BACKEND_URL}.
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 EXPOSE 80
 
-# nginx:alpine's default CMD already runs nginx in the foreground.
+# nginx:alpine's default CMD already runs nginx in the foreground (after the
+# entrypoint expands the templates into /etc/nginx/conf.d/).

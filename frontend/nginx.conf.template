@@ -17,10 +17,12 @@ server {
     }
 
     # Proxy API calls to the backend service.
-    # Override the upstream by templating/replacing this block per environment;
-    # `backend` is the service name when run via docker-compose.
+    # ${BACKEND_URL} is substituted at container start by the nginx image's
+    # envsubst step (see frontend/Dockerfile); defaults to the compose service
+    # name "backend". Only env-defined vars are substituted, so nginx's own
+    # $host / $remote_addr below are left intact.
     location /api/ {
-        proxy_pass         http://backend:8080;
+        proxy_pass         ${BACKEND_URL};
         proxy_http_version 1.1;
         proxy_set_header   Host              $host;
         proxy_set_header   X-Real-IP         $remote_addr;
