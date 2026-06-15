@@ -33,12 +33,31 @@
 }
 
 .text {
+  /* Reset native button chrome — this is a clickable text preview. */
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
   font-size: var(--text-sm-size);
   color: var(--text-primary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.text:hover {
+  text-decoration: underline;
+}
+
+.text:focus-visible {
+  outline: 2px solid var(--focus-ring, var(--accent));
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .meta {

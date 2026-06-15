@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 
 import { EmbeddingModelSelect } from "../components/EmbeddingModelSelect";
-import { MemoryRecordForm } from "../components/MemoryRecordForm";
+import {
+  MemoryRecordModal,
+  type MemoryRecordModalMode,
+} from "../components/MemoryRecordModal";
 import { MemoryRecordList } from "../components/MemoryRecordList";
 import {
   useEmbeddingSetting,
@@ -10,8 +13,14 @@ import {
 import { useAgents } from "../lib/agents";
 import { useDeleteMemoryRecord, useMemoryRecords, type MemoryRecord } from "../lib/memory";
 import { useModels, useProviders } from "../lib/models";
-import { Alert, Card, Select, SkeletonRows } from "../components/ui";
+import { Alert, Button, Card, Select, SkeletonRows } from "../components/ui";
 import styles from "./SettingsPage.module.css";
+
+type MemoryEditor =
+  | { mode: "create" }
+  | { mode: "edit"; record: MemoryRecord }
+  | { mode: "view"; record: MemoryRecord }
+  | null;
 
 /**
  * Settings panel (F05): pick the global embedding model (from the F03 catalog,
@@ -29,7 +38,10 @@ export function SettingsPage() {
   const memory = useMemoryRecords();
   const agents = useAgents();
   const deleteRecord = useDeleteMemoryRecord();
-  const [editing, setEditing] = useState<MemoryRecord | null>(null);
+  const [editor, setEditor] = useState<MemoryEditor>(null);
+
+  const editorMode: MemoryRecordModalMode | undefined = editor?.mode;
+  const editorRecord = editor && editor.mode !== "create" ? editor.record : undefined;
 
   // Agent id → name, so the records list can label agent-scoped records (F06).
   const agentNames = Object.fromEntries(
@@ -83,20 +95,23 @@ export function SettingsPage() {
 
       <Card title="Memory" as="h3">
         <div className={styles.section} aria-label="Memory records">
-          <div className={styles.formBlock}>
-            {editing ? (
-              <MemoryRecordForm
-                record={editing}
-                onSaved={() => setEditing(null)}
-                onCancel={() => setEditing(null)}
-              />
-            ) : (
-              <MemoryRecordForm />
-            )}
+          <div className={styles.recordsHeader}>
+            <span className={styles.recordsLabel}>Records</span>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setEditor({ mode: "create" })}
+              leadingIcon={
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path strokeLinecap="round" d="M12 5v14M5 12h14" />
+                </svg>
+              }
+            >
+              Add record
+            </Button>
           </div>
 
           <div className={styles.records}>
-            <span className={styles.recordsLabel}>Records</span>
             {memory.isLoading && <SkeletonRows count={3} />}
             {memory.isError && (
               <Alert variant="danger" role="alert">
@@ -107,13 +122,29 @@ export function SettingsPage() {
               <MemoryRecordList
                 records={memory.data.records}
                 agentNames={agentNames}
-                onEdit={(record) => setEditing(record)}
+                onView={(record) => setEditor({ mode: "view", record })}
+                onEdit={(record) => setEditor({ mode: "edit", record })}
                 onDelete={(record) => deleteRecord.mutate(record.id)}
               />
             )}
           </div>
         </div>
       </Card>
+
+      {editorMode && (
+        <MemoryRecordModal
+          mode={editorMode}
+          record={editorRecord}
+          agentNames={agentNames}
+          onClose={() => setEditor(null)}
+          onSaved={() => setEditor(null)}
+          onEdit={
+            editor?.mode === "view"
+              ? () => setEditor({ mode: "edit", record: editor.record })
+              : undefined
+          }
+        />
+      )}
     </section>
   );
 }

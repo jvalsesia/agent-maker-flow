@@ -6,17 +6,20 @@ interface MemoryRecordListProps {
   records: MemoryRecord[];
   /** Agent id → name, used to label a record scoped to a single agent (F06). */
   agentNames?: Record<string, string>;
+  onView: (record: MemoryRecord) => void;
   onEdit: (record: MemoryRecord) => void;
   onDelete: (record: MemoryRecord) => void;
 }
 
 /**
  * The stored memory records. Each listed record has been embedded already, so
- * it shows a "Ready" status alongside its model and size, with edit/delete.
+ * it shows a "Ready" status alongside its model and size, with view/edit/delete.
+ * Clicking a record's text opens it in the view modal.
  */
 export function MemoryRecordList({
   records,
   agentNames = {},
+  onView,
   onEdit,
   onDelete,
 }: MemoryRecordListProps) {
@@ -29,7 +32,14 @@ export function MemoryRecordList({
       {records.map((record) => (
         <li key={record.id} className={styles.item}>
           <div className={styles.body}>
-            <span className={styles.text}>{record.text}</span>
+            <button
+              type="button"
+              className={styles.text}
+              aria-label="View record"
+              onClick={() => onView(record)}
+            >
+              {record.text}
+            </button>
             <div className={styles.meta}>
               <span className={styles.status} aria-label="status">
                 <StatusDot status="complete" label="" />
@@ -54,6 +64,9 @@ export function MemoryRecordList({
             </div>
           </div>
           <div className={styles.actions}>
+            <Button variant="ghost" size="sm" aria-label={`View record`} onClick={() => onView(record)}>
+              View
+            </Button>
             <Button variant="ghost" size="sm" aria-label={`Edit record`} onClick={() => onEdit(record)}>
               Edit
             </Button>
