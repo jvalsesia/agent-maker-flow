@@ -1,0 +1,17 @@
+# Installed/built locally; recreated inside the image.
+node_modules/
+dist/
+
+# Local config / secrets
+.env
+.env.*
+!.env.example
+
+# VCS / editor noise
+.git
+.gitignore
+*.md
+
+# Non-npm lockfiles (this image builds with npm ci).
+pnpm-lock.yaml
+pnpm-workspace.yaml

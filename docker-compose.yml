@@ -45,6 +45,49 @@ services:
     volumes:
       - ./litellm/config.yaml:/app/config.yaml:ro
 
+  # Rust Axum API (REST + SSE). Boot is fail-fast: it migrates Postgres, PINGs
+  # Redis, and warms the Clerk JWKS cache before binding :8080.
+  backend:
+    build:
+      context: ./backend
+    container_name: amf-backend
+    environment:
+      # Point at the in-network service hostnames (not localhost).
+      DATABASE_URL: postgres://amf:amf@postgres:5432/amf
+      REDIS_URL: redis://redis:6379
+      BIND_ADDR: 0.0.0.0:8080
+      LITELLM_BASE_URL: http://litellm:4000
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-amf-dev}
+      # Allow the frontend origin (served by nginx on :8081 in this compose).
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:8081}
+      # Clerk auth (F02) — required at boot. Set these in a root .env file.
+      CLERK_ISSUER: ${CLERK_ISSUER:?set CLERK_ISSUER in .env}
+      CLERK_AUTHORIZED_PARTIES: ${CLERK_AUTHORIZED_PARTIES:-http://localhost:8081}
+      RUST_LOG: ${RUST_LOG:-info}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      litellm:
+        condition: service_started
+
+  # React SPA built by Vite, served by nginx. nginx reverse-proxies /api -> backend.
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Vite inlines VITE_* at build time; the Clerk publishable key is public.
+        VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:?set VITE_CLERK_PUBLISHABLE_KEY in .env}
+    container_name: amf-frontend
+    ports:
+      - "8081:80"
+    depends_on:
+      backend:
+        condition: service_started
+
 volumes:
   amf-postgres-data:
   amf-redis-data:
