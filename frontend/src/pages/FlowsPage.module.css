@@ -104,11 +104,6 @@
   min-height: 0;
 }
 
-.flowsCard {
-  flex: none;
-  max-height: 38%;
-}
-
 .center {
   flex: 1;
   min-width: 0;

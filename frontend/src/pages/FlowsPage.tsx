@@ -93,6 +93,8 @@ export function FlowsPage() {
   const [pendingAction, setPendingAction] = useState<{ run: () => void } | null>(null);
   // Monitor drawer (open state only matters below the three-pane width).
   const [monitorOpen, setMonitorOpen] = useState(false);
+  // Saved-flows browser, now surfaced in a modal rather than the sidebar.
+  const [flowsModalOpen, setFlowsModalOpen] = useState(false);
 
   // F10 run state: the current prompt, the active run id, and the session turns.
   const [prompt, setPrompt] = useState("");
@@ -349,6 +351,14 @@ export function FlowsPage() {
           <span className={styles.status}>
             {activeName ? (isDirty ? "Unsaved changes" : "Saved") : "Not saved yet"}
           </span>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setFlowsModalOpen(true)}
+            aria-haspopup="dialog"
+          >
+            Open flow{flows && flows.length > 0 ? ` (${flows.length})` : ""}
+          </Button>
           <Button variant="secondary" size="sm" onClick={handleNew}>
             New
           </Button>
@@ -384,24 +394,9 @@ export function FlowsPage() {
       )}
 
       <div className={styles.workspace}>
-        <aside className={styles.left} aria-label="Saved flows">
+        <aside className={styles.left} aria-label="Agents palette">
           <Card title="Agents palette" className={styles.paletteCard} bodyClassName={styles.scrollBody}>
             <AgentPalette onAddToCanvas={handleAddToCanvas} />
-          </Card>
-          <Card title="Saved flows" className={styles.flowsCard} bodyClassName={styles.scrollBody}>
-            <SavedFlowsList
-              flows={flows ?? []}
-              activeFlowId={activeFlowId}
-              onOpen={handleOpen}
-              onRename={(f) => {
-                setDialogError(null);
-                setSaveDialog({ mode: "rename", flow: f });
-              }}
-              onDelete={(f) => {
-                setDeleteError(null);
-                setDeleteTarget(f);
-              }}
-            />
           </Card>
         </aside>
 
@@ -462,6 +457,39 @@ export function FlowsPage() {
           </Card>
         </aside>
       </div>
+
+      <Modal
+        open={flowsModalOpen}
+        onClose={() => setFlowsModalOpen(false)}
+        title="Saved flows"
+        size="lg"
+        footer={
+          <Button variant="secondary" onClick={() => setFlowsModalOpen(false)}>
+            Close
+          </Button>
+        }
+      >
+        <SavedFlowsList
+          flows={flows ?? []}
+          activeFlowId={activeFlowId}
+          onOpen={(f) => {
+            // Close the browser first so the unsaved-changes guard (if any)
+            // isn't stacked on top of this modal.
+            setFlowsModalOpen(false);
+            handleOpen(f);
+          }}
+          onRename={(f) => {
+            setFlowsModalOpen(false);
+            setDialogError(null);
+            setSaveDialog({ mode: "rename", flow: f });
+          }}
+          onDelete={(f) => {
+            setFlowsModalOpen(false);
+            setDeleteError(null);
+            setDeleteTarget(f);
+          }}
+        />
+      </Modal>
 
       {saveDialog && (
         <SaveFlowDialog

@@ -33,6 +33,9 @@
 }
 
 .nameCell {
+  /* Greedy: absorb slack so the timestamp + actions stay right-aligned even in
+     the wider Saved-flows modal. */
+  width: 100%;
   padding: var(--space-2) var(--space-2);
   font-weight: var(--weight-medium);
   color: var(--text-primary);
