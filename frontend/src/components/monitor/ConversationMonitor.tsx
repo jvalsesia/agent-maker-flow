@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { NodeRunState } from "../../lib/runStream";
 import type { RunConnection } from "../../hooks/useRunStream";
 import { Alert, Badge } from "../ui";
@@ -38,6 +39,21 @@ export function ConversationMonitor({
 }: ConversationMonitorProps) {
   const reconnecting = isRunning && connection === "connecting";
 
+  // Keep the conversation pinned to the latest content: scroll to the bottom
+  // whenever a turn is added or the live nodes advance (status change or new
+  // streamed output). The signature folds the streaming progress so token-by-
+  // token output keeps the view at the bottom, not just on whole-turn appends.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const nodesSignature = nodes
+    .map((node) => `${node.nodeId}:${node.status}:${node.output?.length ?? 0}`)
+    .join("|");
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [turns.length, nodesSignature]);
+
   // The live nodes belong to the most recent run, so they slot between the
   // latest user prompt and the assistant response that follows it. Split the
   // turns at the last user message: history + prompt render above the nodes,
@@ -73,7 +89,7 @@ export function ConversationMonitor({
         </Alert>
       )}
 
-      <div className={styles.scroll}>
+      <div className={styles.scroll} ref={scrollRef}>
         {turns.length === 0 && nodes.length === 0 ? (
           // Empty state (no run yet): let ConversationTurns show its placeholder.
           <ConversationTurns turns={turns} />
