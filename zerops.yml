@@ -1,0 +1,85 @@
+# Zerops build & deploy pipeline for agent-maker-flow.
+#
+# Defines the two CODE services built from this repo:
+#   - api : Rust Axum backend (REST + SSE) on :8080
+#   - web : React/Vite SPA served by nginx, reverse-proxying /api -> api
+#
+# The build runs from the repo root, so each service cd's into its subdir
+# (./backend, ./frontend) and deployFiles keep that prefix at runtime.
+#
+# Stateful/managed services (PostgreSQL+pgvector, Valkey/Redis, LiteLLM) are
+# NOT built from source — provision them via the Zerops "import project" YAML
+# or the GUI. This file only describes the source-built services. Cross-service
+# env vars use Zerops' `${servicehostname_var}` reference syntax, e.g.
+# ${db_connectionString} resolves against the managed `db` service.
+
+zerops:
+  # ─────────────────────────────────────────────────────────────────────────
+  # Backend — Rust Axum API. Boot is fail-fast (migrates Postgres, PINGs Redis,
+  # warms Clerk JWKS) before binding :8080.
+  # ─────────────────────────────────────────────────────────────────────────
+  - setup: api
+    build:
+      base: ubuntu/rust@latest
+      buildCommands:
+        - cd backend && cargo build --release
+      # Single self-contained binary; migrations are embedded at compile time
+      # via sqlx::migrate!("./migrations"), so nothing else needs deploying.
+      deployFiles:
+        - backend/target/release/agent-maker-flow-backend
+      # Persist the compiled target dir between builds for fast incremental
+      # rebuilds (the cargo registry is re-fetched; target is the big win).
+      cache:
+        - backend/target
+    run:
+      # Minimal Ubuntu runtime; native-tls (reqwest) needs libssl3 + CA certs
+      # for outbound HTTPS to Clerk JWKS and the LiteLLM gateway.
+      os: ubuntu
+      base: ubuntu@24.04
+      prepareCommands:
+        - sudo apt-get update
+        - sudo apt-get install -y --no-install-recommends ca-certificates libssl3
+      ports:
+        - port: 8080
+          httpSupport: true
+      envVariables:
+        BIND_ADDR: 0.0.0.0:8080
+        RUST_LOG: info
+        # Managed services (provisioned separately). Zerops injects connection
+        # strings for the `db` (PostgreSQL) and `redis` (Valkey) services.
+        DATABASE_URL: ${db_connectionString}
+        REDIS_URL: ${redis_connectionString}
+        # LiteLLM proxy service (single gateway for every provider call).
+        LITELLM_BASE_URL: http://litellm:4000
+        # Origin allowed by CORS + the Clerk `azp` check — the web service's
+        # public URL. Swap to your custom domain once one is assigned.
+        FRONTEND_ORIGIN: ${web_zeropsSubdomain}
+        # --- Secrets: set as project/service env in the Zerops GUI, not here:
+        #     CLERK_ISSUER, CLERK_AUTHORIZED_PARTIES, LITELLM_MASTER_KEY
+      start: backend/target/release/agent-maker-flow-backend
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Frontend — React + Vite SPA, served by nginx. The client calls a relative
+  # /api/v1, so nginx reverse-proxies /api -> the `api` service (with SSE
+  # passthrough) and history-falls-back unknown paths to the app shell.
+  # ─────────────────────────────────────────────────────────────────────────
+  - setup: web
+    build:
+      base: ubuntu/nodejs@20
+      # VITE_* vars are inlined into the bundle at build time. Set the public,
+      # client-safe Clerk publishable key (VITE_CLERK_PUBLISHABLE_KEY) as a
+      # build env var in the Zerops GUI so it is available to `npm run build`.
+      buildCommands:
+        - cd frontend && npm ci && npm run build
+      deployFiles:
+        - frontend/dist
+        - frontend/zerops-nginx.conf
+      cache:
+        - frontend/node_modules
+    run:
+      base: ubuntu/nginx@1.22
+      ports:
+        - port: 80
+          httpSupport: true
+      # Custom server block: SPA history fallback + /api proxy + SSE passthrough.
+      siteConfigPath: frontend/zerops-nginx.conf

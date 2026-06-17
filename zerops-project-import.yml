@@ -1,0 +1,54 @@
+# Zerops project import — provisions the project + all services in one shot.
+# Use via:  Zerops GUI → "Import project"  (paste this file), or
+#           zcli project project-import --workspaceId <id> < zerops-project-import.yml
+#
+# The `api` and `web` services here are placeholders that get their actual
+# build/deploy pipeline from zerops.yml on first push. The managed services
+# (db, redis, litellm) are NOT in zerops.yml — they live here.
+project:
+  name: agent-maker-flow
+
+services:
+  # PostgreSQL 16 with the pgvector extension (required by the memory feature).
+  - hostname: db
+    type: postgresql@16
+    mode: NON_HA # switch to HA for production
+    priority: 10
+
+  # Valkey (Redis-compatible) for caching + usage counters.
+  - hostname: redis
+    type: valkey@7.2
+    mode: NON_HA
+    priority: 10
+
+  # LiteLLM proxy — single gateway for every provider completion/embedding call.
+  # Runs the upstream image; mount litellm/config.yaml and set provider keys as
+  # secret env vars (OPENAI_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY) + the
+  # LITELLM_MASTER_KEY in the Zerops GUI after import.
+  - hostname: litellm
+    type: docker@26
+    priority: 10
+    ports:
+      - port: 4000
+        httpSupport: false
+    envSecrets:
+      LITELLM_MASTER_KEY: sk-amf-dev
+
+  # Rust Axum backend — pipeline defined in zerops.yml (setup: api).
+  - hostname: api
+    type: ubuntu@24.04
+    priority: 5
+    # Secrets the backend needs at boot — fill in real values in the GUI.
+    envSecrets:
+      CLERK_ISSUER: https://your-instance.clerk.accounts.dev
+      CLERK_AUTHORIZED_PARTIES: https://your-web-domain
+      LITELLM_MASTER_KEY: sk-amf-dev
+
+  # React/Vite SPA served by nginx — pipeline defined in zerops.yml (setup: web).
+  - hostname: web
+    type: nginx@1.22
+    priority: 5
+    enableSubdomainAccess: true
+    # Public, client-safe Clerk key — inlined into the bundle at build time.
+    envSecrets:
+      VITE_CLERK_PUBLISHABLE_KEY: pk_test_your-publishable-key-here
